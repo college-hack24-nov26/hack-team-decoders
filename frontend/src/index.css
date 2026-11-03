@@ -1,0 +1,311 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Ayushman Bharat Digital Health Mission — Kiosk Base Styles
+   ============================================================ */
+
+@layer base {
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    @apply bg-surface font-sans text-gray-900 antialiased;
+  }
+
+  /* WCAG 2.5.5 minimum touch target size */
+  button,
+  a[href],
+  [role="button"] {
+    @apply min-h-touch min-w-touch touch-manipulation;
+  }
+
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    @apply min-h-touch touch-manipulation;
+  }
+
+  a[href] {
+    @apply inline-flex items-center;
+  }
+
+  label:has(input[type="checkbox"]),
+  label:has(input[type="radio"]) {
+    @apply min-h-touch touch-manipulation;
+  }
+}
+
+/* ============================================================
+   Tricolor Strip — 4px saffron-white-green bar at top
+   ============================================================ */
+
+@layer components {
+  .tricolor-strip {
+    @apply flex w-full;
+    height: 4px;
+  }
+
+  .tricolor-strip::before,
+  .tricolor-strip::after {
+    content: "";
+    flex: 1;
+  }
+
+  .tricolor-strip .tricolor-saffron {
+    @apply flex-1;
+    background-color: #ff9933;
+  }
+
+  .tricolor-strip .tricolor-white {
+    @apply flex-1;
+    background-color: #ffffff;
+  }
+
+  .tricolor-strip .tricolor-green {
+    @apply flex-1;
+    background-color: #138808;
+  }
+}
+
+/* ============================================================
+   Ayushman Bharat Gradient & Decorative Elements
+   ============================================================ */
+
+@layer components {
+  /* Subtle top-to-bottom gradient backdrop for main content areas */
+  .ab-gradient-bg {
+    background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 30%, #f8fafc 60%, #ffffff 100%);
+  }
+
+  /* Ayushman Bharat branded header bar gradient */
+  .ab-header-gradient {
+    background: linear-gradient(135deg, #002b5b 0%, #0f4c81 50%, #002b5b 100%);
+  }
+
+  /* Decorative side accent bar — used on cards for AB flavor */
+  .ab-accent-left {
+    @apply relative;
+  }
+  .ab-accent-left::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 4px 0 0 4px;
+    background: linear-gradient(180deg, #ff9933, #002b5b, #138808);
+  }
+
+  /* Ayushman badge pill */
+  .ab-badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+    background: linear-gradient(135deg, #e8f4fd, #f0f7ff);
+    color: #002b5b;
+    border: 1px solid rgba(0, 43, 91, 0.12);
+  }
+
+  /* Ayushman Bharat hero/banner section */
+  .ab-hero-section {
+    background: linear-gradient(135deg, #002b5b 0%, #0d3f6e 40%, #0f6db8 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ab-hero-section::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 80%;
+    height: 200%;
+    background: radial-gradient(ellipse at center, rgba(255, 153, 51, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .ab-hero-section::after {
+    content: "";
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 60%;
+    height: 150%;
+    background: radial-gradient(ellipse at center, rgba(19, 136, 8, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Subtle pattern overlay for cards — Ashoka-wheel inspired */
+  .ab-pattern-overlay {
+    position: relative;
+    overflow: hidden;
+  }
+  .ab-pattern-overlay::after {
+    content: "";
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 43, 91, 0.04);
+    pointer-events: none;
+  }
+
+  /* AB-branded divider */
+  .ab-divider {
+    height: 3px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      #ff9933 20%,
+      #002b5b 50%,
+      #138808 80%,
+      transparent 100%
+    );
+    border-radius: 2px;
+  }
+}
+
+/* ============================================================
+   Skeleton Shimmer Loader
+   ============================================================ */
+
+@layer components {
+  .skeleton {
+    @apply rounded bg-gray-200;
+    background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+
+  .skeleton-text {
+    @apply skeleton h-4 w-full;
+  }
+
+  .skeleton-text-sm {
+    @apply skeleton h-3 w-3/4;
+  }
+
+  .skeleton-heading {
+    @apply skeleton h-6 w-1/2;
+  }
+
+  .skeleton-button {
+    @apply skeleton h-12 w-full rounded-md;
+  }
+
+  .skeleton-card {
+    @apply skeleton h-32 w-full rounded-md;
+  }
+}
+
+/* ============================================================
+   Typewriter Effect
+   ============================================================ */
+
+@layer components {
+  .typewriter {
+    overflow: hidden;
+    border-right: 2px solid #002b5b;
+    white-space: normal;
+    animation: blink-caret 0.75s step-end infinite;
+  }
+
+  @keyframes blink-caret {
+    from,
+    to {
+      border-color: transparent;
+    }
+    50% {
+      border-color: #002b5b;
+    }
+  }
+}
+
+/* ============================================================
+   Mic Pulse Rings
+   ============================================================ */
+
+@layer components {
+  .mic-pulse-ring {
+    @apply absolute inset-0 rounded-full border-2 border-red-400;
+    animation: mic-pulse 1.5s ease-out infinite;
+  }
+
+  .mic-pulse-ring:nth-child(2) {
+    animation-delay: 0.5s;
+  }
+
+  .mic-pulse-ring:nth-child(3) {
+    animation-delay: 1s;
+  }
+}
+
+/* ============================================================
+   Page Transition
+   ============================================================ */
+
+@layer components {
+  .page-enter {
+    @apply animate-fade-in;
+  }
+}
+
+/* ============================================================
+   Government-style card — with subtle AB enhancement
+   ============================================================ */
+
+@layer components {
+  .govt-card {
+    @apply rounded-lg border border-gray-200 bg-white p-6 shadow-sm;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .govt-card-hover:hover {
+    @apply -translate-y-1 shadow-md;
+    border-color: rgba(0, 43, 91, 0.15);
+  }
+}
+
+/* ============================================================
+   Government primary button — Ayushman Bharat styled
+   ============================================================ */
+
+@layer components {
+  .btn-primary {
+    @apply rounded-lg bg-primary-600 px-6 py-3 text-base font-semibold text-white shadow-sm transition-all duration-200;
+    background: linear-gradient(135deg, #002b5b 0%, #0f4c81 100%);
+  }
+
+  .btn-primary:hover {
+    @apply -translate-y-0.5 shadow-md;
+    background: linear-gradient(135deg, #001937 0%, #002b5b 100%);
+  }
+
+  .btn-primary:disabled {
+    @apply cursor-not-allowed opacity-50 translate-y-0 shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply rounded-lg border border-gray-300 bg-white px-6 py-3 text-base font-semibold text-gray-700 shadow-sm transition-all duration-200;
+  }
+
+  .btn-secondary:hover {
+    @apply -translate-y-0.5 border-gray-400 bg-gray-50 shadow-md;
+  }
+}
+
+/* ============================================================
+   Ayushman Bharat — Subtle Watermark
+   ============================================================ */
+
+@layer components {
+  .ab-watermark {
+    position: relative;
+  }
+}

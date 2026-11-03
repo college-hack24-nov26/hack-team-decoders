@@ -1,0 +1,26 @@
+# Normalise line endings.
+#
+# Without this, a Windows checkout with core.autocrlf=true produces CRLF in the
+# working tree while Prettier defaults to endOfLine: "lf". The result is
+# `npm run format:check` failing locally on files whose content is already
+# correct, and passing in CI, where the Linux runner checks out LF. That is a
+# confusing split between machines, and with the three of us on different
+# setups it would keep coming back.
+#
+# eol=lf (not just text=auto) forces LF in the working tree too, so the repo,
+# every developer machine and CI all agree.
+* text=auto eol=lf
+
+# Binary files git must not touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.mp3 binary
+*.wav binary
+*.woff binary
+*.woff2 binary
+*.ttf binary

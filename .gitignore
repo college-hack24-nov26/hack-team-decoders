@@ -1,0 +1,66 @@
+# ── OS / IDE ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.pem
+
+# ── Secrets — never commit real .env files ───────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# Cloud service-account key files. These are bearer credentials: anyone holding
+# one can spend against the project until the key is revoked, so they must never
+# be committed. Point GOOGLE_APPLICATION_CREDENTIALS at a path matching these.
+gcp-*.json
+*-key.json
+*-credentials.json
+service-account*.json
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+*.coverage
+htmlcov/
+
+# ── Node / frontend ──────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/coverage/
+*.tsbuildinfo
+
+# ── Docker ───────────────────────────────────────────────────────────────────
+infra/postgres_data/
+
+# Phase 2 — cached TTS audio clips. Regenerated on demand from the question
+# ontology, so there is no reason to version them.
+tts_cache/
+backend/tts_cache/
+
+# Local dev SQLite database. Contains patient rows, and every developer's copy
+# diverges, so committing it means both leaking records and a permanent conflict.
+# Recreated automatically on startup; see app/db/session.py.
+*.db
+*.sqlite
+*.sqlite3
+backend/medikiosk.db
+
+# Uploaded document images — prescriptions, lab reports, discharge papers. These
+# are patient health records, so they must never reach the repository. This is
+# FILE_STORAGE_ROOT for the local disk backend; see app/services/storage.py.
+storage/
+backend/storage/
+
+# Leftover local clone of the landing-page repo from an abandoned build approach.
+# main now bundles the landing page at frontend/landing/, so this working-tree
+# directory (a nested git repo with a 7.7 MB video) must never be committed.
+landing-page-medikiosk/

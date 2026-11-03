@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediKiosk — Ayushman Bharat AI-Powered Patient Intake</title>
+  <meta name="description" content="MediKiosk — an Ayushman Bharat Digital Health Mission initiative. AI-powered patient intake with voice-first interviews, multilingual support, and ABDM integration for government healthcare facilities." />
+  <link rel="icon" type="image/svg+xml" href="logo.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Tricolor Strip -->
+  <div class="tricolor" aria-hidden="true">
+    <span class="saffron"></span>
+    <span class="white-strip"></span>
+    <span class="green-strip"></span>
+  </div>
+
+  <!-- Header -->
+  <header id="header">
+    <div class="header-inner">
+      <div class="logo-section">
+        <div class="logo-icon">
+          <img src="logo.svg" alt="MediKiosk Logo" style="object-fit:contain;" />
+        </div>
+        <div class="logo-text">
+          <h1>MediKiosk</h1>
+          <span>Ayushman Bharat · Govt. of India</span>
+        </div>
+      </div>
+      <nav>
+        <a href="#techStack">Tech Stack</a>
+        <a href="#userFlow">User Flow</a>
+        <a href="/kiosk/" class="nav-cta">Try Prototype →</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       Scroll-Driven Video Section
+       ============================================================ -->
+  <section class="scroll-video-section" id="scrollVideoSection">
+    <div class="scroll-video-sticky">
+
+      <!-- Full-screen video background -->
+      <video
+        id="scrollVideo"
+        src="e_scroll.mp4"
+        muted
+        playsinline
+        preload="auto"
+      ></video>
+
+      <!-- Floating hero content overlay -->
+      <div class="hero-overlay" id="heroOverlay">
+        <div class="hero-overlay-content">
+          <span class="hero-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/></svg>
+            Smart India Hackathon 2026 · Problem Statement
+          </span>
+
+          <h2>AI-Powered<br/><span class="highlight">Patient Intake</span><br/>for Ayushman Bharat Hospitals</h2>
+
+          <p>
+            Voice-first medical interviews, multilingual support, document intelligence, and seamless ABDM integration — purpose-built for India's Ayushman Bharat Digital Health Mission and high-footfall public healthcare system.
+          </p>
+
+          <div class="hero-buttons">
+            <a href="/kiosk/" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              Patient Kiosk
+            </a>
+            <a href="/kiosk/physician" class="btn btn-secondary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2M9 7a4 4 0 110-8 4 4 0 010 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+              Doctor Portal
+            </a>
+            <a href="https://sih.gov.in/sih2026PS" target="_blank" class="btn btn-secondary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              View PS 26047
+            </a>
+          </div>
+
+          <div class="hero-stats">
+            <div class="stat">
+              <div class="stat-number">8+</div>
+              <div class="stat-label">Languages</div>
+            </div>
+            <div class="stat">
+              <div class="stat-number">90s</div>
+              <div class="stat-label">Avg. Interview</div>
+            </div>
+            <div class="stat">
+              <div class="stat-number">ABDM</div>
+              <div class="stat-label">FHIR R4 Ready</div>
+            </div>
+            <div class="stat">
+              <div class="stat-number">24/7</div>
+              <div class="stat-label">Kiosk Mode</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scroll hint at the bottom -->
+        <div class="scroll-hint" id="scrollHint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M19 12l-7 7-7-7"/>
+          </svg>
+          <span>Scroll to explore</span>
+        </div>
+      </div>
+
+      <!-- Video fade overlay (fades video to white) -->
+      <div class="video-fade-overlay" id="videoFadeOverlay"></div>
+
+      <!-- Iframe (sits behind video, revealed as video fades) -->
+      <div class="iframe-container" id="iframeContainer">
+        <iframe
+          id="siteIframe"
+          data-src="/kiosk/"
+          title="MediKiosk Prototype"
+          allow="microphone; camera"
+        ></iframe>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="video-progress-bar">
+        <div class="video-progress-fill" id="videoProgressFill"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Tech Stack Section
+       ============================================================ -->
+  <section class="tech-stack-section" id="techStack">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
+          Technology
+        </span>
+        <h2>Built with Modern, <span class="highlight">Production-Ready</span> Tech</h2>
+        <p>Fully self-hostable — the entire stack runs locally with no cloud dependency. Designed for air-gapped government hospital networks.</p>
+      </div>
+
+      <div class="tech-grid">
+
+        <!-- AI & Voice -->
+        <div class="tech-category">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
+            AI & Voice
+          </h3>
+          <div class="tech-items">
+            <div class="tech-card">
+              <div class="tech-icon sarvam">स</div>
+              <span class="tech-name">Sarvam AI</span>
+              <span class="tech-desc">TTS · STT · Translation</span>
+            </div>
+            <div class="tech-card">
+              <div class="tech-icon llm">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+              </div>
+              <span class="tech-name">Local LLMs</span>
+              <span class="tech-desc">Ollama · Llama · Gemma</span>
+            </div>
+            <div class="tech-card">
+              <div class="tech-icon ocr">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              </div>
+              <span class="tech-name">OCR Engine</span>
+              <span class="tech-desc">Sarvam · Tesseract · Cloud Vision</span>
+            </div>
+            <div class="tech-card">
+              <div class="tech-icon whisper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+              <span class="tech-name">Whisper</span>
+              <span class="tech-desc">Local Speech Recognition</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Backend -->
+        <div class="tech-category">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            Backend
+          </h3>
+          <div class="tech-items">
+            <div class="tech-card">
+              <div class="tech-icon fastapi">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+              <span class="tech-name">FastAPI</span>
+              <span class="tech-desc">Python REST API</span>
+            </div>
+            <div class="tech-card">
+              <div class="tech-icon postgres">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+              </div>
+              <span class="tech-name">PostgreSQL</span>
+              <span class="tech-desc">pgvector · Embeddings</span>
+            </div>
+            <div class="tech-card">
+              <div class="tech-icon redis">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              </div>
+              <span class="tech-name">Redis</span>
+              <span class="tech-desc">Session Cache</span>
+            </div>
+            <div class="tech-card">
+              <div class="tech-icon fhir">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              </div>
+              <span class="tech-name">FHIR R4</span>
+              <span class="tech-desc">ABDM Integration</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Frontend -->
+        <div class="tech-category">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/></svg>
+            Frontend & Infra
+          </h3>
+          <div class="tech-items">
+            <div class="tech-card">
+              <div class="tech-icon react">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>
+              </div>
+              <span class="tech-name">React + TypeScript</span>
+              <span class="tech-desc">Vite · Tailwind CSS</span>
+            </div>
+            <div class="tech-card">
+              <div class="tech-icon i18n">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+              </div>
+              <span class="tech-name">i18n · 10 Languages</span>
+              <span class="tech-desc">Hindi · Bengali · Tamil · more</span>
+            </div>
+            <div class="tech-card">
+              <div class="tech-icon docker">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="10" width="22" height="9" rx="2"/><rect x="4" y="6" width="4" height="4"/><rect x="10" y="6" width="4" height="4"/><rect x="10" y="2" width="4" height="4"/></svg>
+              </div>
+              <span class="tech-name">Docker Compose</span>
+              <span class="tech-desc">One-command deploy</span>
+            </div>
+            <div class="tech-card">
+              <div class="tech-icon nginx">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <span class="tech-name">Nginx</span>
+              <span class="tech-desc">Reverse Proxy · SPA</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Local-first callout -->
+      <div class="local-callout">
+        <div class="local-callout-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="local-callout-text">
+          <strong>100% Local-First Architecture</strong>
+          <p>Every component — LLM inference, speech recognition, text-to-speech, OCR, and database — runs entirely on-premises. Zero patient data leaves the hospital network. Perfect for HIPAA, DISHA, and air-gapped deployments.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       User Flow Section
+       ============================================================ -->
+  <section class="user-flow-section" id="userFlow">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Patient Journey
+        </span>
+        <h2>From Walk-In to <span class="highlight">Doctor-Ready</span> in 90 Seconds</h2>
+        <p>A voice-first workflow designed for patients of all literacy levels and ages.</p>
+      </div>
+
+      <div class="flow-timeline">
+
+        <div class="flow-step">
+          <div class="flow-number">1</div>
+          <div class="flow-content">
+            <div class="flow-icon-wrap lang-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            </div>
+            <h4>Choose Language</h4>
+            <p>Patient selects from 10 Indian languages. All subsequent interactions happen in their chosen language.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-number">2</div>
+          <div class="flow-content">
+            <div class="flow-icon-wrap login-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <h4>ABHA Login / Register</h4>
+            <p>Authenticate with ABHA ID, Aadhaar number, or register as a new patient. Linked to ABDM.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-number">3</div>
+          <div class="flow-content">
+            <div class="flow-icon-wrap consent-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            </div>
+            <h4>Audio Consent</h4>
+            <p>Consent is read aloud by the kiosk in the patient's language. One tap to agree — no forms to read.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-number">4</div>
+          <div class="flow-content">
+            <div class="flow-icon-wrap interview-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
+            </div>
+            <h4>Voice Interview</h4>
+            <p>AI asks structured medical questions via voice. Patient speaks naturally — STT captures, LLM extracts symptoms, vitals, and history.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-number">5</div>
+          <div class="flow-content">
+            <div class="flow-icon-wrap docs-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <h4>Document Scan</h4>
+            <p>Upload prescriptions, lab reports, or discharge summaries. OCR extracts text, LLM structures it into a timeline.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-number">6</div>
+          <div class="flow-content">
+            <div class="flow-icon-wrap summary-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            </div>
+            <h4>Doctor Dashboard</h4>
+            <p>Physician sees a structured SOAP summary with red-flag alerts, document timeline, and FHIR-ready data — before the patient walks in.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-left">
+        <p><strong>MediKiosk</strong> — Smart India Hackathon 2026 · Ayushman Bharat</p>
+        <p>Content conceptualized under National Health Authority, Government of India</p>
+        <p class="team-credit">Made with ❤️ by <strong>Team WinExe</strong></p>
+      </div>
+      <div class="footer-links">
+        <a href="#">Terms</a>
+        <a href="#">Privacy</a>
+        <a href="#">Accessibility</a>
+        <a href="https://github.com/Medi-Kiosk/Medi-Kiosk">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ===== CONFIGURATION =====
+    const TIMING = {
+      textFadeStart: 0.08,
+      textFadeEnd: 0.22,
+      videoScrubEnd: 1.0,
+      videoFadeStart: 0.82,
+      videoFadeEnd: 0.86,
+      iframeLoadStart: 0.78,
+      iframeAppear: 0.86
+    };
+
+    const IS_MOBILE = window.innerWidth < 768;
+
+    const header = document.getElementById('header');
+    const video = document.getElementById('scrollVideo');
+    const section = document.getElementById('scrollVideoSection');
+    const progressFill = document.getElementById('videoProgressFill');
+    const heroOverlay = document.getElementById('heroOverlay');
+    const scrollHint = document.getElementById('scrollHint');
+    const videoFadeOverlay = document.getElementById('videoFadeOverlay');
+    const iframeContainer = document.getElementById('iframeContainer');
+    const siteIframe = document.getElementById('siteIframe');
+
+    let videoDuration = 0;
+    let iframeLoaded = false;
+    let targetTime = 0;
+    let currentTime = 0;
+    let lastSeekTime = 0;
+
+    // On mobile, reduce the scroll section height for a faster experience
+    if (IS_MOBILE) {
+      section.style.height = '600vh';
+    }
+
+    function initVideo() {
+      if (video.duration && video.duration !== Infinity) {
+        videoDuration = video.duration;
+      } else {
+        videoDuration = 8.5; // fallback
+      }
+      // Seek to frame 0 so the video isn't blank
+      video.currentTime = 0.01;
+    }
+
+    if (video.readyState >= 1) {
+      initVideo();
+    }
+    video.addEventListener('loadedmetadata', initVideo);
+    video.addEventListener('durationchange', initVideo);
+
+    function computeProgress() {
+      const scrollY = window.scrollY;
+      const sectionTop = section.offsetTop;
+      const sectionHeight = section.offsetHeight;
+      const viewportHeight = window.innerHeight;
+      const scrollRange = sectionHeight - viewportHeight;
+      if (scrollRange <= 0) return 0;
+      return Math.max(0, Math.min(1, (scrollY - sectionTop) / scrollRange));
+    }
+
+    let scrollDir = 0; // -1 up, 0 still, 1 down
+    let lastScrollY = window.scrollY;
+
+    // --- Mobile CTA: shown below the scroll section on mobile ---
+    let mobileCta = null;
+    if (IS_MOBILE) {
+      mobileCta = document.createElement('div');
+      mobileCta.id = 'mobileCta';
+      mobileCta.innerHTML = `
+        <a href="/kiosk/" class="mobile-cta-btn mobile-cta-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          Try Patient Kiosk
+        </a>
+        <a href="/kiosk/physician" class="mobile-cta-btn mobile-cta-secondary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
+          Doctor Portal
+        </a>
+      `;
+      // Insert right after the scroll section
+      section.insertAdjacentElement('afterend', mobileCta);
+    }
+
+    function animate() {
+      const currentScrollY = window.scrollY;
+      const delta = currentScrollY - lastScrollY;
+      if (delta > 2) scrollDir = 1;
+      else if (delta < -2) scrollDir = -1;
+      // Keep direction until reversed (deadzone prevents flicker)
+      lastScrollY = currentScrollY;
+
+      const progress = computeProgress();
+
+      // Header
+      header.classList.toggle('scrolled', window.scrollY > 20);
+
+      // --- Video scrubbing ---
+      if (videoDuration > 0) {
+        const videoProgress = Math.min(1, Math.max(0, progress / TIMING.videoScrubEnd));
+        targetTime = videoProgress * videoDuration;
+
+        // Smoother lerp on desktop, snappier on mobile
+        const lerpFactor = IS_MOBILE ? 0.3 : 0.2;
+        currentTime += (targetTime - currentTime) * lerpFactor;
+
+        const now = performance.now();
+        if (Math.abs(video.currentTime - currentTime) > 0.02 && now - lastSeekTime > 20) {
+          video.currentTime = currentTime;
+          lastSeekTime = now;
+        }
+      }
+
+      // Progress bar
+      progressFill.style.width = (progress * 100) + '%';
+
+      // --- Hero text fade out ---
+      if (progress < TIMING.textFadeStart) {
+        heroOverlay.style.opacity = 1;
+        heroOverlay.style.transform = 'translateY(0)';
+        heroOverlay.style.pointerEvents = 'auto';
+      } else if (progress < TIMING.textFadeEnd) {
+        const fadeOut = 1 - (progress - TIMING.textFadeStart) / (TIMING.textFadeEnd - TIMING.textFadeStart);
+        heroOverlay.style.opacity = fadeOut;
+        heroOverlay.style.transform = `translateY(${-(1 - fadeOut) * 50}px)`;
+        heroOverlay.style.pointerEvents = fadeOut > 0.3 ? 'auto' : 'none';
+      } else {
+        heroOverlay.style.opacity = 0;
+        heroOverlay.style.pointerEvents = 'none';
+      }
+
+      // Scroll hint
+      scrollHint.style.opacity = progress > 0.02 ? Math.max(0, 1 - progress * 12) : 1;
+
+      // --- Video fade to white ---
+      if (progress < TIMING.videoFadeStart) {
+        videoFadeOverlay.style.opacity = 0;
+        video.style.opacity = 1;
+      } else if (progress < TIMING.videoFadeEnd) {
+        const fadeAmount = (progress - TIMING.videoFadeStart) / (TIMING.videoFadeEnd - TIMING.videoFadeStart);
+        videoFadeOverlay.style.opacity = fadeAmount;
+        video.style.opacity = 1 - fadeAmount;
+      } else {
+        videoFadeOverlay.style.opacity = 1;
+        video.style.opacity = 0;
+      }
+
+      // --- Iframe / CTA reveal ---
+      if (!IS_MOBILE) {
+        // Desktop: reveal iframe embedded in the page
+        if (progress > TIMING.iframeLoadStart && !iframeLoaded) {
+          siteIframe.src = siteIframe.getAttribute('data-src');
+          iframeLoaded = true;
+        }
+
+        if (progress >= TIMING.iframeAppear) {
+          iframeContainer.classList.add('visible');
+          header.classList.add('hide-for-iframe');
+        } else {
+          iframeContainer.classList.remove('visible');
+          header.classList.remove('hide-for-iframe');
+        }
+      } else {
+        // Mobile: never show embedded iframe (nested scroll = bad UX).
+        // The mobileCta block below the section links to /kiosk/ directly.
+        iframeContainer.style.display = 'none';
+
+        // Fade in the mobile CTA as the video fades out
+        if (mobileCta) {
+          const ctaProgress = Math.max(0, Math.min(1,
+            (progress - TIMING.videoFadeStart) / (1 - TIMING.videoFadeStart)
+          ));
+          mobileCta.style.opacity = ctaProgress;
+          mobileCta.style.transform = `translateY(${(1 - ctaProgress) * 20}px)`;
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

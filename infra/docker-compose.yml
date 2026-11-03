@@ -1,0 +1,152 @@
+###############################################################################
+# MediKiosk — full-stack local development
+#
+# Usage:
+#   cd infra
+#   docker compose up --build          # first run (builds images + runs migrations)
+#   docker compose up --build --watch  # rebuild frontend automatically on UI changes
+#   docker compose up                  # subsequent runs (no rebuild needed)
+#   docker compose down                # stop (data preserved in volumes)
+#   docker compose down -v             # stop + wipe all data
+#
+# Access:
+#   Frontend:  http://localhost:3000
+#   Backend:   http://localhost:8000   (Swagger UI at /docs)
+#   Postgres:  localhost:5432          (user/pass/db: medikiosk)
+#   Redis:     localhost:6379
+###############################################################################
+
+services:
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: medikiosk
+      POSTGRES_PASSWORD: medikiosk
+      POSTGRES_DB: medikiosk
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-pgvector.sql:/docker-entrypoint-initdb.d/01-pgvector.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medikiosk -d medikiosk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend ─────────────────────────────────────────────────────────────────
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: ../backend/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://medikiosk:medikiosk@db:5432/medikiosk
+      JWT_SECRET: demo-secret-change-in-production
+      DEBUG: "true"
+      FILE_STORAGE_ROOT: /app/storage
+      ABDM_FHIR_ENDPOINT: http://localhost:8000/api/v1/abdm-mock/fhir
+      PURGE_AFTER_PUSH: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # ── Migrations ──────────────────────────────────────────────────────────────
+
+  migrate:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://medikiosk:medikiosk@db:5432/medikiosk
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # ── Frontend ────────────────────────────────────────────────────────────────
+  # Built as a static bundle (React + Tailwind), served by nginx.
+  # nginx proxies /api/* and /health to the backend — single origin, no CORS.
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    develop:
+      watch:
+        # Source code (pages, components, styles, store, api)
+        - action: rebuild
+          path: ../frontend/src
+        # Entry HTML
+        - action: rebuild
+          path: ../frontend/index.html
+        # Build config
+        - action: rebuild
+          path: ../frontend/tailwind.config.js
+        - action: rebuild
+          path: ../frontend/postcss.config.js
+        - action: rebuild
+          path: ../frontend/vite.config.ts
+        - action: rebuild
+          path: ../frontend/tsconfig.json
+        # Dependencies
+        - action: rebuild
+          path: ../frontend/package.json
+        - action: rebuild
+          path: ../frontend/package-lock.json
+        # Docker/nginx config
+        - action: rebuild
+          path: ../frontend/Dockerfile
+        - action: rebuild
+          path: ../frontend/nginx.conf
+        # Landing page
+        - action: rebuild
+          path: ../landing-page-medikiosk
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_storage:

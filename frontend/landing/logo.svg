@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="split" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="50%" stop-color="transparent" />
+      <stop offset="50%" stop-color="#1A639B" />
+    </linearGradient>
+  </defs>
+  <path d="M 45 15 L 75 15 L 75 45 L 105 45 L 105 75 L 75 75 L 75 105 L 45 105 L 45 75 L 15 75 L 15 45 L 45 45 Z"
+        fill="url(#split)" stroke="#1A639B" stroke-width="12" stroke-linejoin="round" />
+</svg>

@@ -1,0 +1,224 @@
+{
+  "app": {
+    "name": "MediKiosk",
+    "tagline": "AI-powered patient case-taking"
+  },
+  "languageSelect": {
+    "title": "Choose your language",
+    "subtitle": "Select the language you are most comfortable speaking",
+    "screenInEnglish": "You can speak and listen in this language. Screen text will be in English.",
+    "select": "Select"
+  },
+  "login": {
+    "title": "Let's identify you",
+    "subtitle": "Use your ABHA ID, your Aadhaar number, or register as a new patient",
+    "abhaTab": "ABHA ID",
+    "aadhaarTab": "Aadhaar",
+    "registerTab": "New patient",
+    "abhaLabel": "ABHA ID",
+    "abhaPlaceholder": "91-1234-5678-9012",
+    "abhaHelp": "Your 14-digit ABHA health ID. Hyphens are optional.",
+    "abhaNotFound": "We could not find that ABHA ID. Check the number, or continue with Aadhaar or new registration.",
+    "lookupButton": "Continue",
+    "noAbha": "Don't have this?",
+    "useAadhaarLink": "Use Aadhaar instead",
+    "registerLink": "Register as a new patient",
+    "aadhaarLabel": "Aadhaar number",
+    "aadhaarPlaceholder": "12-digit Aadhaar number",
+    "aadhaarHelp": "We never store your Aadhaar number itself, only a secure reference to it.",
+    "aadhaarInvalid": "Please enter all 12 digits of your Aadhaar number.",
+    "sessionExpired": "Your session timed out for privacy. Please identify yourself again to continue.",
+    "aadhaarNeedsDetails": "We could not find an existing record. Please fill in your details to continue.",
+    "aadhaarLinked": "Will be linked to the Aadhaar ending in {{last4}}.",
+    "nameLabel": "Full name",
+    "namePlaceholder": "Enter your full name",
+    "ageLabel": "Age",
+    "agePlaceholder": "Years",
+    "ageInvalid": "Please enter a valid age between 0 and 150.",
+    "genderLabel": "Gender",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "genderOther": "Other",
+    "phoneLabel": "Phone number",
+    "phonePlaceholder": "10-digit mobile number",
+    "phoneInvalid": "Please enter a valid 10-digit mobile number.",
+    "registerButton": "Register and continue",
+    "fillAllFields": "Please fill in your name, age and phone number.",
+    "demoNotice": "DEMO MODE — ABHA/Aadhaar verification is simulated. No real identity check is performed."
+  },
+  "consent": {
+    "title": "Your permission",
+    "subtitle": "Press the speaker on each section to hear it, then accept it",
+    "forPatient": "Permission for {{name}}",
+    "playAudio": "Listen to this section",
+    "stopAudio": "Stop",
+    "iAccept": "I understand and I agree",
+    "required": "Required",
+    "optional": "Optional",
+    "audioConfirmation": "This has been read aloud to me and I understand it.",
+    "noSpeechSupport": "This device cannot play audio. Please ask the attendant to read each section aloud to you, then tick the box below.",
+    "submitButton": "Give permission and continue",
+    "mustAccept": "Please accept the two required sections to continue.",
+    "mustHearAudio": "Please listen to the sections you have agreed to.",
+    "skipAudio": "I can read this myself — do not play the audio.",
+    "stopAllAudio": "Stop reading aloud",
+    "readingProgress": "({{current}} of {{total}})",
+    "sections": {
+      "interview": {
+        "title": "Health questions",
+        "description": "We will ask about your problem, your symptoms, your past illnesses and the medicines you take. Your answers are saved for your doctor."
+      },
+      "sharePhysician": {
+        "title": "Sharing with your doctor",
+        "description": "Everything you tell us is shown to the doctor who treats you at this hospital."
+      },
+      "documents": {
+        "title": "Your old papers",
+        "description": "You may show old prescriptions, lab reports or discharge papers. We read them and arrange them by date for your doctor."
+      },
+      "abdmPush": {
+        "title": "Saving to your ABHA health record",
+        "description": "We can save a summary of today's visit to your national ABHA health record, so any hospital can see it later. You may say no to this."
+      }
+    },
+    "audio": {
+      "interview": "This section asks your permission for us to ask you questions about your health. We will ask what problem brought you here, how long you have had it, what other illnesses you have had, and which medicines you take. Your answers will be saved and shown to your doctor. You may stop at any time.",
+      "sharePhysician": "This section asks your permission to show everything you tell us to the doctor who will treat you at this hospital. This helps the doctor understand your problem before you go in, so your time with the doctor is used well.",
+      "documents": "This section asks your permission to look at any medical papers you have brought, such as old prescriptions, laboratory reports, or hospital discharge papers. We will read them, pick out the important details, and arrange them by date for your doctor. This is optional. You may say no and still see the doctor.",
+      "abdmPush": "This section is optional. It asks whether we may save a summary of today's visit to your A B H A health record, which is your national health record. If you agree, any hospital in India can see this visit in future. If you say no, your information stays only with this hospital."
+    }
+  },
+  "interview": {
+    "title": "Health Interview",
+    "subtitle": "We will ask you some questions about your health. You can speak or tap your answers.",
+    "modeGeneral": "General / Allopathic",
+    "modeAyush": "AYUSH / Ayurvedic",
+    "start": "Start Interview",
+    "complete": "Interview Complete",
+    "completeMsg": "Thank you! Your answers have been recorded. Please proceed to document upload or wait for the doctor.",
+    "redFlagTitle": "Priority Alert — Please inform staff",
+    "holdToSpeak": "Hold to speak your answer",
+    "recording": "Recording... release to send",
+    "micError": "Could not access microphone",
+    "confirm": "Confirm",
+    "submit": "Submit",
+    "skip": "Skip this question",
+    "replay": "Hear the question again",
+    "tooShort": "That was too short. Hold the button while you speak.",
+    "notHeard": "Sorry, we could not hear that. Please try again.",
+    "addPapers": "Next: add my medical papers",
+    "noPapers": "I have no papers to show"
+  },
+  "common": {
+    "loading": "Please wait…",
+    "error": "Something went wrong. Please try again.",
+    "back": "Back",
+    "next": "Next",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "documents": {
+    "upload": {
+      "title": "Your medical papers",
+      "subtitle": "Take a photo or pick files from your device",
+      "camera": "Camera",
+      "file": "Choose file",
+      "processing": "Reading your document…",
+      "uploaded": "Uploaded documents",
+      "viewTimeline": "View timeline",
+      "skip": "Skip for now"
+    },
+    "timeline": {
+      "title": "Document timeline",
+      "subtitle": "Your documents arranged by date",
+      "empty": "No documents uploaded yet.",
+      "entities": "items",
+      "abnormal": "abnormal",
+      "flagged": "Abnormal",
+      "noEntities": "No entities extracted from this document.",
+      "uploadMore": "Upload more"
+    }
+  },
+  "language": {
+    "chooseLanguage": "Choose language",
+    "audioUnavailable": "Audio is not available right now. Please read the text, or ask the attendant to read it to you.",
+    "en": "English",
+    "hi": "हिन्दी"
+  },
+  "visitDone": {
+    "title": "You are all done",
+    "titleNamed": "You are all done, {{name}}",
+    "saved": "Your answers have been saved for your doctor.",
+    "queue": "You have not lost your place. Please stay seated until you are called.",
+    "interviewPending": "You have not finished the health questions yet. Your doctor will have less to work with.",
+    "goToInterview": "Answer the health questions",
+    "addMorePapers": "Add more papers",
+    "finish": "Finish"
+  },
+  "dashboard": {
+    "login": {
+      "title": "Physician Dashboard",
+      "subtitle": "Sign in to review patient summaries"
+    },
+    "queue": {
+      "title": "Patient Queue",
+      "patients": "patients",
+      "empty": "No patients waiting. The queue will update automatically."
+    }
+  },
+  "patientType": {
+    "title": "Welcome to MediKiosk",
+    "subtitle": "Are you visiting for the first time, or have you been here before?",
+    "newTitle": "New Patient",
+    "newSubtitle": "First time here? Register now.",
+    "returningTitle": "Returning Patient",
+    "returningSubtitle": "Already registered? Welcome back."
+  },
+  "returning": {
+    "title": "Welcome Back",
+    "subtitle": "Enter your phone number to find your record.",
+    "findRecord": "Find My Record",
+    "notFound": "No record found for this number.",
+    "registerInstead": "Register as a new patient",
+    "welcomeBack": "Welcome back, {{name}}!",
+    "pastVisits": "Your recent visits",
+    "noVisits": "You have no past visits yet.",
+    "generalVisit": "Visit",
+    "startNewVisit": "Start New Visit",
+    "statusCompleted": "Completed",
+    "statusInProgress": "In Progress"
+  },
+  "doctor": {
+    "selectDepartment": "Select Department",
+    "departmentSubtitle": "Choose the department you need.",
+    "selectDoctor": "Select a Doctor",
+    "noneAvailable": "No doctors are listed for this department right now.",
+    "continueAnyway": "Continue without a doctor",
+    "changeDepartment": "← Change department",
+    "inQueue": "{{count}} in queue",
+    "booking": "Booking your visit…",
+    "dept": {
+      "allopathy": "Allopathy",
+      "ayush": "AYUSH"
+    }
+  },
+  "patientSummary": {
+    "title": "Review Your Medical Summary",
+    "subtitle": "Please review the summary below. You can edit any field or confirm to proceed.",
+    "generatingTitle": "Preparing Your Health Summary...",
+    "generatingSubtitle": "Combining your uploaded documents & responses",
+    "abdmNotice": "Encrypted & Prepared for Physician Review",
+    "editedBadge": "Edited by Patient",
+    "confirmedBadge": "Confirmed by Patient",
+    "spokenTitle": "Summary Overview",
+    "chiefComplaint": "Chief Complaint / Primary Concern",
+    "symptoms": "History of Presenting Symptoms",
+    "pastHistory": "Past Medical History",
+    "allergies": "Allergies & Sensitivities",
+    "saveEdits": "Save Changes",
+    "editBtn": "Edit Details",
+    "confirmBtn": "Confirm Summary"
+  }
+}

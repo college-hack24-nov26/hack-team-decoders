@@ -1,0 +1,12 @@
+[
+  {
+    "source": "/kiosk/assets/**",
+    "destination": "/kiosk/assets/:splat",
+    "action": "rewrite"
+  },
+  {
+    "source": "/kiosk/**",
+    "destination": "/kiosk/index.html",
+    "action": "rewrite"
+  }
+]
