@@ -1,12 +1,11 @@
 ﻿# MediKiosk
-[WEBSITE](https://medickiosk.in/)
+
 
 
 AI-powered, multilingual, voice+touch patient history-taking kiosk for AYUSH/allopathic OPDs.
 Patients complete a structured health history *before* reaching the doctor — in their own
 language, by voice or touch — freeing the consultation window for examination and reasoning.
 
-→ Full docs: [`docs/`](./docs/README.md)
 
 ---
 
