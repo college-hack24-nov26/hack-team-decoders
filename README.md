@@ -1,6 +1,5 @@
 ﻿# MediKiosk
 
- prototype : [https://medi-kiosk.onrender.com/](url)
 
 
 
