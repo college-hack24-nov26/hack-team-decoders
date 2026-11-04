@@ -1,5 +1,7 @@
 ﻿# MediKiosk
 
+ prototype : [https://medi-kiosk.onrender.com/](url)
+
 
 
 AI-powered, multilingual, voice+touch patient history-taking kiosk for AYUSH/allopathic OPDs.
