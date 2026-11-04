@@ -172,20 +172,26 @@ async def upload_document(
             )
         entity_count = len(result.entities)
 
-        # Embedding
-        embedding = generate_embedding(ocr_text)
-        db.execute(
-            text(
-                "INSERT INTO document_embeddings (id, document_id, patient_id, embedding) "
-                "VALUES (:id, :document_id, :patient_id, cast(:embedding AS vector))"
-            ),
-            {
-                "id": str(uuid.uuid4()),
-                "document_id": str(doc.id),
-                "patient_id": str(patient.id),
-                "embedding": str(embedding),
-            },
-        )
+        # Embedding. The vector column only exists on PostgreSQL with pgvector (it
+        # is added by the migration, not the ORM), so on the SQLite database used
+        # for local development the insert failed and took the whole upload down
+        # with a 500 as soon as OCR returned any text. Skip it there instead.
+        if db.get_bind().dialect.name == "postgresql":
+            embedding = generate_embedding(ocr_text)
+            db.execute(
+                text(
+                    "INSERT INTO document_embeddings (id, document_id, patient_id, embedding) "
+                    "VALUES (:id, :document_id, :patient_id, cast(:embedding AS vector))"
+                ),
+                {
+                    "id": str(uuid.uuid4()),
+                    "document_id": str(doc.id),
+                    "patient_id": str(patient.id),
+                    "embedding": str(embedding),
+                },
+            )
+        else:
+            logger.info("documents: skipping vector embedding (no pgvector on this database)")
 
     log_action(
         db,

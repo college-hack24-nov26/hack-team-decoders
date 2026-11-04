@@ -2,12 +2,20 @@
  * Document upload screen — camera capture + file picker, multi-doc upload.
  */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { api } from "../api/client";
 import { HealthShield } from "../components/AyushmanIcons";
 import { SkeletonCard } from "../components/Spinner";
 import { showToast } from "../components/toast-store";
+import { getLanguage } from "../store/language";
+import { getCompletedInterview } from "../store/visit";
+
+interface ConsentStatus {
+  active: boolean;
+  scope: Record<string, unknown> | null;
+}
 
 interface UploadedDoc {
   id: string;
@@ -26,6 +34,50 @@ export function DocumentUploadPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  /** The patient's current consent scope; null until loaded. Reading old papers
+   *  is an optional consent, and the upload API refuses it when declined. */
+  const [consentScope, setConsentScope] = useState<Record<string, unknown> | null>(null);
+  /** Reached again from the summary screen after the interview is finished. */
+  const interviewDone = getCompletedInterview() !== null;
+  const [granting, setGranting] = useState(false);
+  const documentsAllowed = consentScope === null || Boolean(consentScope.documents);
+
+  useEffect(() => {
+    let cancelled = false;
+    api<ConsentStatus>("/consent/current")
+      .then((res) => {
+        if (!cancelled) setConsentScope(res.scope ?? {});
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** Record a fresh consent that adds the documents scope to what was given. */
+  const allowDocuments = async () => {
+    setGranting(true);
+    setError("");
+    try {
+      const scope = { ...consentScope, documents: true };
+      await api("/consent", {
+        method: "POST",
+        body: {
+          scope,
+          language: getLanguage(),
+          audio_confirmed: true,
+          confirmation_method: "read_by_patient",
+        },
+      });
+      setConsentScope(scope);
+      showToast(t("documents.upload.allowed", "You can now add your papers"), "success");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.error"));
+    } finally {
+      setGranting(false);
+    }
+  };
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -56,7 +108,7 @@ export function DocumentUploadPage() {
 
         const doc: UploadedDoc = await res.json();
         setUploads((prev) => [...prev, doc]);
-        showToast("Document uploaded successfully", "success");
+        showToast(t("documents.upload.success", "Document uploaded successfully"), "success");
       } catch (e) {
         const msg = e instanceof Error ? e.message : t("common.error");
         setError(msg);
@@ -91,9 +143,30 @@ export function DocumentUploadPage() {
           </div>
         )}
 
+        {!documentsAllowed && (
+          <div className="govt-card mb-6 border-2 border-saffron/30 bg-saffron/5 p-5 text-center">
+            <p className="text-sm text-gray-700">
+              {t(
+                "documents.upload.notAllowed",
+                "You chose not to let us read your old papers. To add them, allow it below — or skip this step.",
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={() => void allowDocuments()}
+              disabled={granting}
+              className="btn-primary mt-4 px-6 py-3"
+            >
+              {t("documents.upload.allow", "Allow reading my papers")}
+            </button>
+          </div>
+        )}
+
         {/* Upload area */}
         <div
-          className="govt-card mb-6 border-2 border-dashed border-primary-200 p-5"
+          className={`govt-card mb-6 border-2 border-dashed border-primary-200 p-5 ${
+            documentsAllowed ? "" : "pointer-events-none opacity-40"
+          }`}
           style={{ backgroundColor: "rgba(232, 244, 253, 0.3)" }}
         >
           <div className="grid grid-cols-2 gap-3">
@@ -187,7 +260,9 @@ export function DocumentUploadPage() {
             {uploads.map((doc) => (
               <div key={doc.id} className="govt-card flex items-center justify-between p-4">
                 <div>
-                  <span className="text-sm font-medium text-gray-900">{doc.doc_type}</span>
+                  <span className="text-sm font-medium capitalize text-gray-900">
+                    {doc.doc_type.replace(/_/g, " ")}
+                  </span>
                   {doc.document_date && (
                     <span className="ml-2 text-xs text-gray-500">{doc.document_date}</span>
                   )}
@@ -196,10 +271,12 @@ export function DocumentUploadPage() {
                   className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                     doc.ocr_status === "done"
                       ? "bg-govgreen/10 text-govgreen"
-                      : "bg-red-50 text-red-600"
+                      : "bg-saffron/10 text-saffron-dark"
                   }`}
                 >
-                  {doc.ocr_status}
+                  {doc.ocr_status === "done"
+                    ? t("documents.upload.read", "Read ✓")
+                    : t("documents.upload.savedNotRead", "Saved — text not read")}
                 </span>
               </div>
             ))}
@@ -217,12 +294,14 @@ export function DocumentUploadPage() {
             </button>
           )}
           <button
-            onClick={() => navigate("/interview")}
+            onClick={() => navigate(interviewDone ? "/patient-summary" : "/interview")}
             className="btn-primary flex-1 py-3 text-base"
           >
-            {uploads.length > 0
-              ? t("documents.upload.continueInterview", "Continue to Interview")
-              : t("documents.upload.skip", "Skip for now")}
+            {interviewDone
+              ? t("documents.upload.backToSummary", "Back to my summary")
+              : uploads.length > 0
+                ? t("documents.upload.continueInterview", "Continue to Interview")
+                : t("documents.upload.skip", "Skip for now")}
           </button>
         </div>
       </div>

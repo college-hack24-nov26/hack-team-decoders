@@ -607,6 +607,38 @@ def _sarvam_engine(settings, handwriting: bool) -> SarvamOcrEngine:
     )
 
 
+class DemoOcrEngine(OcrEngine):
+    """Offline stand-in for OCR, for demos on machines with no OCR configured.
+
+    Selected with OCR_ENGINE=demo. It does not read the uploaded image: it
+    returns a fixed sample lab report and prescription, clearly labelled as
+    sample text, so the upload -> extraction -> timeline -> dashboard path can
+    be shown end to end without Tesseract installed or a cloud OCR key. Never
+    use it where real patient documents are processed.
+    """
+
+    SAMPLE_TEXT = """[DEMO OCR - sample text, no OCR engine configured]
+CITY DIAGNOSTIC LABORATORY
+Report Date 12-09-2026
+
+Haemoglobin          11.2    g/dL     13.0-17.0
+HbA1c                7.8     %        4.0-5.6
+Fasting Blood Sugar  142     mg/dL    70-100
+Total Cholesterol    210     mg/dL    0-200
+TSH                  2.1     mIU/L    0.4-4.0
+
+Diagnosis: Type 2 Diabetes Mellitus
+Tab Metformin 500mg BD
+Tab Atorvastatin 10mg HS"""
+
+    def extract_text(self, image_path: Path) -> str:
+        logger.info("ocr: demo engine returning sample text for %s", image_path.name)
+        return self.SAMPLE_TEXT
+
+    def supports_handwriting(self) -> bool:
+        return True
+
+
 def get_ocr_engine(handwriting: bool = False) -> OcrEngine:
     """Return the configured OCR engine based on settings.
 
@@ -628,6 +660,11 @@ def get_ocr_engine(handwriting: bool = False) -> OcrEngine:
     from app.core.config import get_settings
 
     settings = get_settings()
+
+    # Offline demo: no binary, no key, no network. Handles handwriting too, since
+    # it never looks at the image.
+    if settings.ocr_engine == "demo":
+        return DemoOcrEngine()
 
     if handwriting:
         if settings.sarvam_api_key:

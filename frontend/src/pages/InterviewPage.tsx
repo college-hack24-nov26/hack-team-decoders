@@ -28,6 +28,14 @@ import {
   submitAnswer,
   transcribeAudio,
 } from "../api/interview";
+import {
+  type Recognizer,
+  canSpeak,
+  createRecognizer,
+  speak as speakInBrowser,
+  stopSpeaking,
+} from "../utils/speech";
+import { matchVoiceAnswer } from "../utils/voiceAnswer";
 
 // ---------------------------------------------------------------------------
 // Progress Ring (SVG circle)
@@ -248,14 +256,8 @@ function MicButton({
 
       {transcript && micState === "done" && (
         <div className="w-full max-w-sm rounded-md border border-govgreen/20 bg-govgreen/5 px-4 py-2 text-sm text-govgreen-dark">
-          <span className="font-semibold">Heard: </span>
+          <span className="font-semibold">{t("interview.heard", "Heard")}: </span>
           {transcript}
-        </div>
-      )}
-
-      {transcript.startsWith("[Mock ASR]") && (
-        <div className="w-full max-w-sm rounded-md border border-saffron/20 bg-saffron/5 px-4 py-2 text-xs text-saffron-dark">
-          ASR not configured — set WHISPER_API_URL in backend/.env to enable real voice input.
         </div>
       )}
     </div>
@@ -373,6 +375,9 @@ export function InterviewPage() {
   const [lastTranscript, setLastTranscript] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  /** Browser speech recognition running alongside the recorder, used when the
+   *  server has no speech-to-text provider configured. */
+  const recognizerRef = useRef<Recognizer | null>(null);
 
   // Skip-interview modal state
   const [showSkipModal, setShowSkipModal] = useState(false);
@@ -390,7 +395,31 @@ export function InterviewPage() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Autoplay question audio
+  /** What the browser voice reads for the current question: the prompt, then the
+   *  choices, in the language they are shown in. Kept in a ref so the autoplay
+   *  effect below fires per question, not on every render. */
+  const speechRef = useRef({ text: "", language: lang });
+  if (question) {
+    const promptText =
+      question.prompt || (lang === "hi" ? question.prompt_hi : question.prompt_en) || "";
+    const choices =
+      question.input_type === "yes_no"
+        ? [t("common.yes"), t("common.no")]
+        : question.options.map((o) => o.label || (lang === "hi" ? o.label_hi : o.label_en));
+    speechRef.current = {
+      text: [promptText, choices.filter(Boolean).join(", ")].filter(Boolean).join(". "),
+      language: question.language || lang,
+    };
+  }
+
+  const speakQuestionInBrowser = useCallback(() => {
+    const { text, language } = speechRef.current;
+    if (!text || !canSpeak()) return;
+    void speakInBrowser(text, language).catch(() => undefined);
+  }, []);
+
+  // Autoplay question audio: the server's voice when configured, otherwise the
+  // browser's own voice, so the question is always read out.
   useEffect(() => {
     const url = question?.audio_url;
     if (audioRef.current) {
@@ -398,7 +427,12 @@ export function InterviewPage() {
       URL.revokeObjectURL(audioRef.current.src);
       audioRef.current = null;
     }
-    if (!url) return;
+    stopSpeaking();
+    if (!question?.field_id) return;
+    if (!url) {
+      speakQuestionInBrowser();
+      return stopSpeaking;
+    }
 
     let revoked = false;
     let objectUrl: string | null = null;
@@ -414,20 +448,26 @@ export function InterviewPage() {
         audioRef.current = element;
         void element.play().catch(() => undefined);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!revoked) speakQuestionInBrowser();
+      });
 
     return () => {
       revoked = true;
+      stopSpeaking();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [question?.field_id, question?.audio_url]);
+  }, [question?.field_id, question?.audio_url, speakQuestionInBrowser]);
 
   const replayPrompt = useCallback(() => {
     const element = audioRef.current;
-    if (!element) return;
+    if (!element) {
+      speakQuestionInBrowser();
+      return;
+    }
     element.currentTime = 0;
     void element.play().catch(() => undefined);
-  }, []);
+  }, [speakQuestionInBrowser]);
 
   const handleStart = useCallback(async () => {
     setLoading(true);
@@ -507,6 +547,10 @@ export function InterviewPage() {
   // Voice recording handlers
   const startRecording = useCallback(async () => {
     setLastTranscript("");
+    setError(null);
+    // Silence the kiosk's own voice so it is not transcribed as the answer.
+    stopSpeaking();
+    audioRef.current?.pause();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -523,6 +567,7 @@ export function InterviewPage() {
       mediaRecorder.ondataavailable = (e) => chunksRef.current.push(e.data);
       mediaRecorder.start();
       mediaRecorderRef.current = mediaRecorder;
+      recognizerRef.current = createRecognizer(lang);
       setMicState("recording");
     } catch {
       setMicState("error");
@@ -533,13 +578,17 @@ export function InterviewPage() {
         ),
       );
     }
-  }, [t]);
+  }, [lang, t]);
 
   const stopRecording = useCallback(async () => {
     const recorder = mediaRecorderRef.current;
     if (!recorder || recorder.state !== "recording") return;
 
     setMicState("transcribing");
+
+    const recognizer = recognizerRef.current;
+    recognizerRef.current = null;
+    const browserText = recognizer ? recognizer.stop() : Promise.resolve("");
 
     const stopped = new Promise<void>((resolve) => {
       recorder.addEventListener("stop", () => resolve(), { once: true });
@@ -553,29 +602,49 @@ export function InterviewPage() {
     const mimeType = recorder.mimeType || "audio/webm";
     const audioBlob = new Blob(chunksRef.current, { type: mimeType });
 
-    if (audioBlob.size === 0) {
-      setMicState("idle");
-      setError(t("interview.tooShort", "That was too short. Hold the button while you speak."));
-      return;
-    }
-
     setLoading(true);
     try {
-      const asrResult = await transcribeAudio(audioBlob, lang);
-      setLastTranscript(asrResult.text);
-
-      if (!asrResult.text.trim() || asrResult.text.startsWith("[Mock ASR]")) {
-        setMicState("done");
-        setLoading(false);
-        if (!asrResult.text.trim()) {
-          setError(t("interview.notHeard", "Sorry, we could not hear that. Please try again."));
-          setMicState("idle");
+      // Server speech-to-text first; the browser's transcript when the server
+      // has none configured (mock), heard nothing, or is unreachable.
+      let text = "";
+      if (audioBlob.size > 0) {
+        try {
+          const asrResult = await transcribeAudio(audioBlob, lang);
+          if (!asrResult.is_mock && !asrResult.text.startsWith("[Mock ASR]")) {
+            text = asrResult.text.trim();
+          }
+        } catch {
+          // fall through to the browser transcript
         }
+      }
+      if (!text) text = await browserText;
+
+      if (!text) {
+        setMicState("idle");
+        setError(
+          audioBlob.size === 0
+            ? t("interview.tooShort", "That was too short. Hold the button while you speak.")
+            : t("interview.notHeard", "Sorry, we could not hear that. Please try again."),
+        );
         return;
       }
 
+      setLastTranscript(text);
       setMicState("done");
-      await handleAnswer(asrResult.text, "voice", asrResult.text);
+
+      const match = question ? matchVoiceAnswer(question, text) : { ok: false as const };
+      if (!match.ok) {
+        setError(
+          t(
+            "interview.voiceNoMatch",
+            "We heard you, but could not match an answer. Please tap it.",
+          ),
+        );
+        setTimeout(() => setMicState("idle"), 2500);
+        return;
+      }
+
+      await handleAnswer(match.value, "voice", text);
       setTimeout(() => setMicState("idle"), 1500);
     } catch (e) {
       setMicState("error");
@@ -584,7 +653,7 @@ export function InterviewPage() {
     } finally {
       setLoading(false);
     }
-  }, [lang, handleAnswer, t]);
+  }, [lang, handleAnswer, question, t]);
 
   // ---------------------------------------------------------------------------
   // Render: Intro screen (before start) — shows the derived interview type
@@ -860,7 +929,7 @@ export function InterviewPage() {
           )}
 
           {/* Replay prompt */}
-          {question.audio_url && (
+          {(question.audio_url || canSpeak()) && (
             <button
               type="button"
               onClick={replayPrompt}

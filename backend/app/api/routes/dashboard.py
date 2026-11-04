@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from app.dependencies import CurrentPhysician, DbSession
 from app.models.models import (
+    Doctor,
     Document,
     DocumentEntity,
     InterviewMessage,
@@ -27,6 +28,7 @@ from app.models.models import (
     Patient,
     RedFlag,
     Summary,
+    Visit,
 )
 from app.services.audit import log_action
 from app.services.summary.pdf import render_summary_pdf
@@ -50,11 +52,26 @@ class QueuePatient(BaseModel):
     red_flag_count: int
     summary_status: str | None
     started_at: str | None
+    #: From the visit booked on the kiosk's doctor-selection screen, when there is one.
+    doctor_id: str | None = None
+    doctor_name: str | None = None
+    department: str | None = None
+    token_number: int | None = None
 
 
 class QueueResponse(BaseModel):
     patients: list[QueuePatient]
     total: int
+
+
+class DashboardDoctor(BaseModel):
+    id: str
+    name: str
+    department: str
+    specialization: str | None
+    available: bool
+    waiting: int
+    """Patients in today's queue who picked this doctor."""
 
 
 class PatientSummaryResponse(BaseModel):
@@ -118,6 +135,21 @@ def get_queue(physician: CurrentPhysician, db: DbSession):
         red_flags = db.query(RedFlag).filter(RedFlag.session_id == session.id).all()
         summary = db.query(Summary).filter(Summary.session_id == session.id).first()
 
+        # The visit this interview belongs to, falling back to the patient's most
+        # recent visit for sessions recorded before visits were linked to them.
+        visit = (
+            db.query(Visit).filter(Visit.interview_session_id == session.id).first()
+            or db.query(Visit)
+            .filter(Visit.patient_id == session.patient_id)
+            .order_by(Visit.created_at.desc())
+            .first()
+        )
+        doctor = (
+            db.query(Doctor).filter(Doctor.id == visit.doctor_id).first()
+            if visit is not None and visit.doctor_id
+            else None
+        )
+
         patients.append(
             QueuePatient(
                 patient_id=pid,
@@ -130,6 +162,11 @@ def get_queue(physician: CurrentPhysician, db: DbSession):
                 red_flag_count=len(red_flags),
                 summary_status=summary.status if summary else None,
                 started_at=session.started_at.isoformat() if session.started_at else None,
+                doctor_id=str(doctor.id) if doctor else None,
+                doctor_name=doctor.name if doctor else None,
+                department=(visit.department if visit else None)
+                or (doctor.department if doctor else None),
+                token_number=visit.token_number if visit else None,
             )
         )
 
@@ -145,6 +182,41 @@ def get_queue(physician: CurrentPhysician, db: DbSession):
     db.commit()
 
     return QueueResponse(patients=patients, total=len(patients))
+
+
+@router.get("/doctors", response_model=list[DashboardDoctor])
+def get_doctors(physician: CurrentPhysician, db: DbSession):
+    """Every doctor patients can pick at the kiosk, with how many are waiting.
+
+    "Waiting" counts patients currently in the consult queue (interview done)
+    whose visit names this doctor, so the number matches the queue on screen
+    rather than the lifetime booking counter on the Doctor row.
+    """
+    waiting_rows = (
+        db.query(Visit.doctor_id)
+        .join(InterviewSession, Visit.interview_session_id == InterviewSession.id)
+        .filter(
+            Visit.doctor_id.is_not(None),
+            InterviewSession.status.in_(["completed", "red_flagged"]),
+        )
+        .all()
+    )
+    waiting: dict[str, int] = {}
+    for (doctor_id,) in waiting_rows:
+        waiting[str(doctor_id)] = waiting.get(str(doctor_id), 0) + 1
+
+    doctors = db.query(Doctor).order_by(Doctor.department.asc(), Doctor.name.asc()).all()
+    return [
+        DashboardDoctor(
+            id=str(d.id),
+            name=d.name,
+            department=d.department,
+            specialization=d.specialization,
+            available=d.available,
+            waiting=waiting.get(str(d.id), 0),
+        )
+        for d in doctors
+    ]
 
 
 @router.get("/patients/{patient_id}/summary", response_model=PatientSummaryResponse)

@@ -176,8 +176,8 @@ class TestGenerateFlow:
         assert body["physician_edited"] is False
 
         content = body["structured_content"]
-        assert content["chief_complaint"] == "chest_pain"
-        assert content["hpi"]["site"] == "central"
+        assert content["chief_complaint"] == "Chest pain"
+        assert content["hpi"]["site"] == "Centre of chest"
         # Pulled from the patient's documents, not the interview.
         assert any(m["drug"] == "Metformin" for m in content["drug_history"])
         assert any(i["test"] == "HbA1c" for i in content["prior_investigations"])
@@ -389,6 +389,57 @@ class TestDeterministicSummary:
         summary = summarize_deterministic(context)
         assert "cardiac_chest_pain_dyspnoea" in summary.red_flags_summary
 
+    def test_a_denied_symptom_is_reported_as_no(self, sql_db, seeded_patient):
+        """A clinical-safety regression.
+
+        Answers reach the summarizer stringified, and "False" is a truthy string,
+        so every review-of-systems "No" was summarised as "Yes".
+        """
+        from app.models.models import InterviewAnswer
+
+        for field, value in (("ros.cardiovascular", False), ("ros.constitutional", True)):
+            sql_db.add(
+                InterviewAnswer(
+                    id=uuid.uuid4(),
+                    session_id=seeded_patient["session_id"],
+                    field=field,
+                    value={"answer": value},
+                    input_mode="touch",
+                )
+            )
+        sql_db.commit()
+
+        context = retrieve_session_context(str(seeded_patient["session_id"]), sql_db)
+        ros = summarize_deterministic(context).review_of_systems
+        assert "cardiovascular: No" in ros
+        assert "constitutional: Yes" in ros
+
+    def test_option_keys_become_labels(self, sql_db, seeded_patient):
+        context = retrieve_session_context(str(seeded_patient["session_id"]), sql_db)
+        summary = summarize_deterministic(context)
+        assert summary.chief_complaint == "Chest pain"
+        assert summary.hpi.site == "Centre of chest"
+        assert summary.past_medical_history == "Diabetes, High blood pressure"
+
+    def test_lab_reference_ranges_are_kept(self, sql_db, seeded_patient):
+        from app.models.models import DocumentEntity
+
+        sql_db.add(
+            DocumentEntity(
+                id=uuid.uuid4(),
+                document_id=seeded_patient["document_id"],
+                entity_type="investigation_value",
+                value={"test": "TSH", "value": 2.1, "unit": "mIU/L", "reference_range": "0.4-4.0"},
+                is_abnormal=False,
+            )
+        )
+        sql_db.commit()
+        context = retrieve_session_context(str(seeded_patient["session_id"]), sql_db)
+        tsh = next(
+            i for i in summarize_deterministic(context).prior_investigations if i.test == "TSH"
+        )
+        assert tsh.reference_range == "0.4-4.0"
+
 
 # ---------------------------------------------------------------------------
 # Failover
@@ -430,7 +481,7 @@ class TestRoutingFailover:
         summary, generated_by = await summary_router.generate_summary(context)
 
         assert generated_by == "deterministic"
-        assert summary.chief_complaint == "chest_pain"
+        assert summary.chief_complaint == "Chest pain"
 
     @pytest.mark.asyncio
     async def test_a_failing_main_api_falls_through_to_deterministic(
@@ -454,7 +505,7 @@ class TestRoutingFailover:
         summary, generated_by = await summary_router.generate_summary(context)
 
         assert generated_by == "deterministic"
-        assert summary.chief_complaint == "chest_pain"
+        assert summary.chief_complaint == "Chest pain"
 
 
 class TestLlmEndpointConfiguration:

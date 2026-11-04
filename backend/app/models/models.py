@@ -512,7 +512,7 @@ class Visit(Base):
     )
     status: Mapped[str] = mapped_column(
         String(30), nullable=False, default="registered"
-    )  # registered | in_interview | documents_uploaded | summary_ready | in_consultation | completed
+    )  # registered | in_interview | documents_uploaded | waiting | summary_ready | in_consultation | completed
     token_number: Mapped[int] = mapped_column(Integer, nullable=False)
     chief_complaint: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

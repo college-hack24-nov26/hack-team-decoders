@@ -1,12 +1,17 @@
 /**
  * Doctor selection (F2) — pick a department, then a doctor, then get a token.
  *
- * Two steps on one screen: department grid first, then the available doctors in
- * that department. Selecting a doctor books a visit and shows the token number
+ * Two steps on one screen: department grid first, then the doctors in that
+ * department. Selecting a doctor books a visit and shows the token number
  * before continuing to consent.
+ *
+ * The department grid is built from the doctors the backend returns, not from a
+ * hard-coded list. A fixed list ("Allopathy" / "AYUSH") never matched the
+ * departments doctors are actually stored under, so every department opened
+ * onto "no doctors available".
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client";
@@ -14,29 +19,52 @@ import { createVisit, listDoctors, type DoctorItem } from "../api/clinic";
 import { Spinner } from "../components/Spinner";
 import { setVisitSelection } from "../store/visit";
 
-const DEPARTMENTS: { key: string; icon: string }[] = [
-  { key: "Allopathy", icon: "🏥" },
-  { key: "AYUSH", icon: "🌿" },
-];
+/** The AYUSH systems of medicine; every other department is modern medicine. */
+const AYUSH_DEPARTMENTS = new Set([
+  "Ayurveda",
+  "Yoga & Naturopathy",
+  "Unani",
+  "Siddha",
+  "Sowa-Rigpa",
+  "Homeopathy",
+]);
+
+const DEPARTMENT_ICONS: Record<string, string> = {
+  "General Medicine": "🩺",
+  Cardiology: "❤️",
+  Pediatrics: "🧒",
+  Orthopedics: "🦴",
+  ENT: "👂",
+  Gynaecology: "🤰",
+  Dermatology: "🧴",
+  Ayurveda: "🌿",
+  Homeopathy: "💧",
+  Unani: "🌱",
+  Siddha: "🍃",
+  "Yoga & Naturopathy": "🧘",
+};
+
+interface Department {
+  name: string;
+  doctors: DoctorItem[];
+  available: number;
+}
 
 export function DoctorSelectPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [department, setDepartment] = useState<string | null>(null);
-  const [doctors, setDoctors] = useState<DoctorItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [allDoctors, setAllDoctors] = useState<DoctorItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!department) return;
     let cancelled = false;
-    setLoading(true);
-    setError("");
-    listDoctors(department)
+    listDoctors()
       .then((list) => {
-        if (!cancelled) setDoctors(list);
+        if (!cancelled) setAllDoctors(list);
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof ApiError ? e.message : t("common.error"));
@@ -47,7 +75,34 @@ export function DoctorSelectPage() {
     return () => {
       cancelled = true;
     };
-  }, [department, t]);
+  }, [t]);
+
+  const departments = useMemo(() => {
+    const byName = new Map<string, Department>();
+    for (const doc of allDoctors) {
+      const entry = byName.get(doc.department) ?? {
+        name: doc.department,
+        doctors: [],
+        available: 0,
+      };
+      entry.doctors.push(doc);
+      if (doc.available) entry.available += 1;
+      byName.set(doc.department, entry);
+    }
+    const sorted = [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+    return {
+      modern: sorted.filter((d) => !AYUSH_DEPARTMENTS.has(d.name)),
+      ayush: sorted.filter((d) => AYUSH_DEPARTMENTS.has(d.name)),
+    };
+  }, [allDoctors]);
+
+  const doctors = useMemo(
+    () =>
+      allDoctors
+        .filter((d) => d.department === department)
+        .sort((a, b) => Number(b.available) - Number(a.available) || a.queue_count - b.queue_count),
+    [allDoctors, department],
+  );
 
   const book = async (doctor: DoctorItem | null) => {
     setBooking(true);
@@ -71,6 +126,36 @@ export function DoctorSelectPage() {
     }
   };
 
+  const departmentLabel = (name: string) => t(`doctor.dept.${departmentKey(name)}`, name);
+
+  const renderGroup = (title: string, list: Department[]) =>
+    list.length > 0 && (
+      <section className="mb-8">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+          {title}
+        </h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          {list.map((d) => (
+            <button
+              key={d.name}
+              onClick={() => setDepartment(d.name)}
+              className="govt-card govt-card-hover flex min-h-[7.5rem] flex-col items-center justify-center gap-2 p-4 text-center"
+            >
+              <span className="text-3xl" aria-hidden="true">
+                {DEPARTMENT_ICONS[d.name] ?? "🏥"}
+              </span>
+              <span className="text-base font-semibold text-gray-900">
+                {departmentLabel(d.name)}
+              </span>
+              <span className="text-xs text-gray-500">
+                {t("doctor.availableCount", "{{count}} available", { count: d.available })}
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+    );
+
   return (
     <main className="flex flex-col items-center px-6 py-8">
       <div className="w-full max-w-3xl">
@@ -78,7 +163,7 @@ export function DoctorSelectPage() {
           {department ? t("doctor.selectDoctor") : t("doctor.selectDepartment")}
         </h1>
         <p className="mb-6 text-center text-gray-600">
-          {department ? department : t("doctor.departmentSubtitle")}
+          {department ? departmentLabel(department) : t("doctor.departmentSubtitle")}
         </p>
 
         {error && (
@@ -90,34 +175,18 @@ export function DoctorSelectPage() {
           </div>
         )}
 
-        {/* Step 1 — department grid */}
-        {!department && (
-          <div className="mx-auto grid max-w-xl grid-cols-1 gap-6 sm:grid-cols-2">
-            {DEPARTMENTS.map((d) => (
-              <button
-                key={d.key}
-                onClick={() => setDepartment(d.key)}
-                className="govt-card govt-card-hover flex min-h-[8rem] flex-col items-center justify-center gap-3 p-5 text-center"
-              >
-                <span className="text-4xl" aria-hidden="true">
-                  {d.icon}
-                </span>
-                <span className="text-base font-semibold text-gray-900">
-                  {t(`doctor.dept.${departmentKey(d.key)}`, d.key)}
-                </span>
-              </button>
-            ))}
+        {loading && (
+          <div className="flex justify-center py-10">
+            <Spinner />
           </div>
         )}
 
-        {/* Step 2 — doctors in the chosen department */}
-        {department && (
+        {/* Step 1 — department grid */}
+        {!loading && !department && (
           <>
-            {loading ? (
-              <div className="flex justify-center py-10">
-                <Spinner />
-              </div>
-            ) : doctors.length === 0 ? (
+            {renderGroup(t("doctor.groupModern", "Modern medicine"), departments.modern)}
+            {renderGroup(t("doctor.groupAyush", "AYUSH"), departments.ayush)}
+            {allDoctors.length === 0 && !error && (
               <div className="rounded-md border border-gray-200 bg-surface-section p-6 text-center text-gray-500">
                 {t("doctor.noneAvailable")}
                 <div className="mt-4">
@@ -130,39 +199,63 @@ export function DoctorSelectPage() {
                   </button>
                 </div>
               </div>
-            ) : (
-              <ul className="space-y-3">
-                {doctors.map((doc) => (
-                  <li key={doc.id}>
-                    <button
-                      onClick={() => void book(doc)}
-                      disabled={booking}
-                      className="govt-card govt-card-hover flex w-full items-center justify-between gap-4 p-5 text-left disabled:opacity-60"
-                    >
-                      <div>
-                        <div className="text-lg font-semibold text-gray-900">{doc.name}</div>
-                        {doc.specialization && (
-                          <div className="text-sm text-gray-500">{doc.specialization}</div>
-                        )}
-                      </div>
-                      <span className="shrink-0 rounded-full bg-primary-50 px-3 py-1 text-sm font-medium text-primary-700">
+            )}
+          </>
+        )}
+
+        {/* Step 2 — doctors in the chosen department */}
+        {department && (
+          <>
+            <ul className="space-y-3">
+              {doctors.map((doc) => (
+                <li key={doc.id}>
+                  <button
+                    onClick={() => void book(doc)}
+                    disabled={booking || !doc.available}
+                    className="govt-card govt-card-hover flex w-full items-center justify-between gap-4 p-5 text-left disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <div>
+                      <div className="text-lg font-semibold text-gray-900">{doc.name}</div>
+                      {doc.specialization && (
+                        <div className="text-sm text-gray-500">{doc.specialization}</div>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          doc.available
+                            ? "bg-govgreen/10 text-govgreen"
+                            : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {doc.available
+                          ? t("doctor.available", "Available")
+                          : t("doctor.unavailable", "Not available today")}
+                      </span>
+                      <span className="rounded-full bg-primary-50 px-3 py-1 text-sm font-medium text-primary-700">
                         {t("doctor.inQueue", { count: doc.queue_count })}
                       </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
 
-            <button
-              onClick={() => {
-                setDepartment(null);
-                setDoctors([]);
-              }}
-              className="mt-6 text-sm font-medium text-primary-600 underline"
-            >
-              {t("doctor.changeDepartment")}
-            </button>
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+              <button
+                onClick={() => setDepartment(null)}
+                className="text-sm font-medium text-primary-600 underline"
+              >
+                {t("doctor.changeDepartment")}
+              </button>
+              <button
+                onClick={() => void book(null)}
+                disabled={booking}
+                className="text-sm font-medium text-gray-500 underline"
+              >
+                {t("doctor.continueAnyway")}
+              </button>
+            </div>
           </>
         )}
 

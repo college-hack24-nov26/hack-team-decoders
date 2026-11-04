@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 
-from app.bootstrap import reset_patient_data, seed_admin, seed_doctors
+from app.bootstrap import DEMO_DOCTORS, reset_patient_data, seed_admin, seed_doctors
 from app.models.models import Doctor, Physician, Visit
 from app.services.password import verify_password
 
@@ -37,13 +37,13 @@ class TestSeedAdmin:
 
 class TestSeedDoctors:
     def test_creates_all(self, sql_db):
-        assert seed_doctors(sql_db) == 7
-        assert sql_db.query(Doctor).count() == 7
+        assert seed_doctors(sql_db) == len(DEMO_DOCTORS)
+        assert sql_db.query(Doctor).count() == len(DEMO_DOCTORS)
 
     def test_is_idempotent(self, sql_db):
         seed_doctors(sql_db)
         assert seed_doctors(sql_db) == 0  # nothing new the second time
-        assert sql_db.query(Doctor).count() == 7
+        assert sql_db.query(Doctor).count() == len(DEMO_DOCTORS)
 
     def test_covers_every_demo_department(self, sql_db):
         seed_doctors(sql_db)
@@ -55,6 +55,11 @@ class TestSeedDoctors:
             "Pediatrics",
             "Orthopedics",
             "ENT",
+            "Gynaecology",
+            "Dermatology",
+            "Homeopathy",
+            "Unani",
+            "Yoga & Naturopathy",
         }
 
     def test_includes_two_ayurveda_doctors(self, sql_db):
@@ -90,7 +95,7 @@ class TestResetPatientData:
         assert sql_db.query(RedFlag).count() == 0
         assert sql_db.query(Summary).count() == 0
         # …but configuration kept.
-        assert sql_db.query(Doctor).count() == 7
+        assert sql_db.query(Doctor).count() == len(DEMO_DOCTORS)
         assert sql_db.query(Physician).filter(Physician.role == "admin").count() == 1
 
     def test_safe_on_an_empty_database(self, sql_db):

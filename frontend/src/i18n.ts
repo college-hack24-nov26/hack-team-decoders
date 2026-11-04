@@ -80,8 +80,11 @@ i18n.use(initReactI18next).init({
   interpolation: {
     escapeValue: false, // React already escapes by default
   },
-  // Avoid XSS: never parse HTML in translation strings
-  parseMissingKeyHandler: (key) => `[${key}]`,
+  // A key missing from every locale shows the default text written at the call
+  // site — t("interview.departmentLabel", "Department") — and only falls back to
+  // the bracketed key when there is none, so a gap is visible in development
+  // without putting "[interview.departmentLabel]" in front of a patient.
+  parseMissingKeyHandler: (key, defaultValue) => defaultValue ?? `[${key}]`,
 });
 
 export default i18n;

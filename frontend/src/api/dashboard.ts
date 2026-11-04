@@ -19,11 +19,25 @@ export interface QueuePatient {
   red_flag_count: number;
   summary_status: string | null;
   started_at: string | null;
+  doctor_id: string | null;
+  doctor_name: string | null;
+  department: string | null;
+  token_number: number | null;
 }
 
 export interface QueueResponse {
   patients: QueuePatient[];
   total: number;
+}
+
+export interface DashboardDoctor {
+  id: string;
+  name: string;
+  department: string;
+  specialization: string | null;
+  available: boolean;
+  /** Patients in the consult queue who picked this doctor. */
+  waiting: number;
 }
 
 export interface HPISection {
@@ -134,6 +148,10 @@ export interface PatientSummaryResponse {
 
 export async function fetchQueue(): Promise<QueueResponse> {
   return api<QueueResponse>("/dashboard/queue");
+}
+
+export async function fetchDashboardDoctors(): Promise<DashboardDoctor[]> {
+  return api<DashboardDoctor[]>("/dashboard/doctors");
 }
 
 export async function fetchPatientSummary(patientId: string): Promise<PatientSummaryResponse> {

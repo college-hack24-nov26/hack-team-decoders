@@ -19,7 +19,12 @@ from sqlalchemy.orm import Session
 from app.dependencies import DbSession, require_consent_scope
 from app.interview import conversation, languages, tts
 from app.interview.asr import TranscriptResult, transcribe_audio
-from app.interview.dialogue import InterviewState, get_next_question, get_progress
+from app.interview.dialogue import (
+    InterviewState,
+    get_next_question,
+    get_progress,
+    get_question_sequence,
+)
 from app.interview.ontology import InputType, Question
 from app.interview.red_flags import RULES_BY_ID, evaluate_red_flags
 from app.models.models import (
@@ -28,6 +33,7 @@ from app.models.models import (
     InterviewSession,
     Patient,
     RedFlag,
+    Visit,
 )
 from app.services.audit import log_action
 from app.services.translation import translate_many_from_english
@@ -850,6 +856,21 @@ def complete_session(
         session.status = "completed"
     session.completed_at = now
 
+    # Tie the interview to the visit booked on the doctor-selection screen, so the
+    # dashboard can show which doctor and department the patient is waiting for.
+    # The most recent visit still without an interview is the one this session
+    # belongs to; nothing is linked if the patient skipped doctor selection.
+    visit = (
+        db.query(Visit)
+        .filter(Visit.patient_id == patient.id, Visit.interview_session_id.is_(None))
+        .order_by(Visit.created_at.desc())
+        .first()
+    )
+    if visit is not None:
+        visit.interview_session_id = session.id
+        visit.chief_complaint = visit.chief_complaint or session.chief_complaint
+        visit.status = "summary_ready" if visit.summary_id else "waiting"
+
     log_action(
         db,
         action="interview.session_completed",
@@ -904,6 +925,106 @@ def get_red_flags(
             )
         )
     return responses
+
+
+class ReviewItem(BaseModel):
+    field_id: str
+    section: str
+    question: str
+    answer: str
+    skipped: bool = False
+
+
+class ReviewResponse(BaseModel):
+    session_id: str
+    status: str
+    mode: str
+    chief_complaint: str | None
+    language: str
+    items: list[ReviewItem]
+
+
+def _answer_text(question: Question | None, value: Any, code: str) -> str:
+    """Render a stored answer the way the patient chose it: option labels, not keys."""
+    labels: dict[str, str] = {}
+    if question is not None:
+        for opt in question.options:
+            labels[opt.key] = opt.label_hi if code == "hi" else opt.label_en
+    if isinstance(value, bool):
+        if code == "hi":
+            return "हाँ" if value else "नहीं"
+        return "Yes" if value else "No"
+    if isinstance(value, list):
+        return ", ".join(labels.get(str(v), str(v)) for v in value)
+    if question is not None and question.input_type is InputType.NUMERIC:
+        return f"{value} / 10"
+    if isinstance(value, dict):
+        return ", ".join(f"{k}: {v}" for k, v in value.items())
+    return labels.get(str(value), str(value))
+
+
+@router.get("/sessions/{session_id}/review", response_model=ReviewResponse)
+async def review_session(
+    session_id: str,
+    patient: InterviewPatient,
+    db: DbSession,
+    language: str | None = None,
+):
+    """The patient's own answers, question by question, for the review screen.
+
+    Patient-authenticated and owner-only. The physician summary routes are
+    physician-only, so without this the patient's review screen had nothing real
+    to show and fell back to placeholder text.
+    """
+    session = _get_session_or_404(session_id, patient, db)
+    code = languages.get(_spoken_language(language, patient)).code
+
+    sequence = get_question_sequence(_build_state(session, db))
+    order = {q.field_id: i for i, q in enumerate(sequence)}
+    by_id = {q.field_id: q for q in sequence}
+
+    answers = db.query(InterviewAnswer).filter(InterviewAnswer.session_id == session.id).all()
+    answers.sort(key=lambda a: order.get(a.field, len(order)))
+
+    items: list[ReviewItem] = []
+    for a in answers:
+        q = by_id.get(a.field)
+        stored = a.value if isinstance(a.value, dict) else {"answer": a.value}
+        skipped = bool(stored.get("skipped"))
+        value = stored.get("answer", stored)
+        if q is not None:
+            prompt = q.prompt_hi if code == "hi" else q.prompt_en
+            section = q.section.value
+        else:
+            prompt = a.field.split(".")[-1].replace("_", " ").capitalize()
+            section = a.field.split(".")[0] if "." in a.field else "other"
+        items.append(
+            ReviewItem(
+                field_id=a.field,
+                section=section,
+                question=prompt,
+                answer="" if skipped else _answer_text(q, value, code),
+                skipped=skipped,
+            )
+        )
+
+    # Hindi and English are hand-authored; other languages are machine-translated
+    # when a translation provider is configured, and stay English otherwise.
+    if code not in ("en", "hi") and items:
+        source = [s for item in items for s in (item.question, item.answer)]
+        rendered = await translate_many_from_english(source, code)
+        for i, item in enumerate(items):
+            item.question = rendered[2 * i] or item.question
+            item.answer = rendered[2 * i + 1] or item.answer
+
+    return ReviewResponse(
+        session_id=str(session.id),
+        status=session.status,
+        mode=session.mode,
+        chief_complaint=session.chief_complaint,
+        language=code,
+        items=items,
+    )
 
 
 @router.post("/asr")

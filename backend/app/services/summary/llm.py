@@ -509,7 +509,18 @@ def summarize_deterministic(context: RetrievedContext) -> StructuredSummary:
 
     Used as the final fallback when both Main API and Local model fail.
     """
-    answers = context.answers_by_field()
+    raw_answers = context.answers_by_field()
+    # Review of systems is yes/no. Answers arrive stringified ("True"/"False"),
+    # and a non-empty string is truthy, so testing `if v` reported every "No" as
+    # "Yes" — a patient who denied chest pain was summarised as having it.
+    review_of_systems = "; ".join(
+        f"{k.split('.')[-1]}: {'Yes' if _is_yes(v) else 'No'}"
+        for k, v in raw_answers.items()
+        if k.startswith("ros.")
+    )
+    labels = _option_labels(context.chief_complaint, context.mode)
+    answers = {k: _humanize(labels.get(k), v) for k, v in raw_answers.items()}
+    chief_complaint = _humanize(labels.get("chief_complaint"), context.chief_complaint or "")
     entities = context.entities_grouped()
 
     # Build HPI from SOCRATES fields
@@ -543,7 +554,8 @@ def summarize_deterministic(context: RetrievedContext) -> StructuredSummary:
                 "test": inv.get("test", "Unknown"),
                 "value": str(inv.get("value", "")),
                 "unit": inv.get("unit", ""),
-                "reference_range": inv.get("ref_range", ""),
+                # Module B stores "reference_range"; "ref_range" is the older name.
+                "reference_range": inv.get("reference_range") or inv.get("ref_range", ""),
                 "is_abnormal": inv.get("is_abnormal", False),
                 "date": inv.get("date", ""),
             }
@@ -617,7 +629,7 @@ def summarize_deterministic(context: RetrievedContext) -> StructuredSummary:
     from app.services.summary.schemas import HPISection, InvestigationItem, MedicationItem
 
     return StructuredSummary(
-        chief_complaint=context.chief_complaint,
+        chief_complaint=chief_complaint,
         hpi=HPISection(
             narrative=hpi_fields.get("description", ""),
             site=hpi_fields.get("site", ""),
@@ -641,11 +653,7 @@ def summarize_deterministic(context: RetrievedContext) -> StructuredSummary:
             f"Smoking: {answers.get('personal_history.smoking', 'N/A')}; "
             f"Alcohol: {answers.get('personal_history.alcohol', 'N/A')}"
         ),
-        review_of_systems="; ".join(
-            f"{k.split('.')[-1]}: {'Yes' if v else 'No'}"
-            for k, v in answers.items()
-            if k.startswith("ros.")
-        ),
+        review_of_systems=review_of_systems,
         prior_investigations=[InvestigationItem(**i) for i in investigations],
         ayush_assessment=ayush_text,
         ayush_prakriti=ayush_prakriti,
@@ -662,6 +670,40 @@ def summarize_deterministic(context: RetrievedContext) -> StructuredSummary:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _is_yes(value: str) -> bool:
+    """A stringified yes/no answer, read as the patient meant it."""
+    return value.strip().lower() in {"true", "yes", "1"}
+
+
+def _option_labels(chief_complaint: str | None, mode: str | None) -> dict[str, dict[str, str]]:
+    """field_id -> {option key -> English label} for this session's questions.
+
+    Built from the same question sequence the patient was asked, so a key that
+    means different things in different templates resolves to the right label.
+    """
+    from app.interview.dialogue import InterviewState, get_question_sequence
+
+    state = InterviewState(
+        chief_complaint=chief_complaint, mode=mode or "general", answered_field_ids=set()
+    )
+    return {
+        q.field_id: {opt.key: opt.label_en for opt in q.options}
+        for q in get_question_sequence(state)
+        if q.options
+    }
+
+
+def _humanize(labels: dict[str, str] | None, value: str) -> str:
+    """Replace option keys ("left_arm") with their labels ("Left arm").
+
+    Multi-choice answers arrive comma-joined; anything that is not a known key
+    (free text, numbers) passes through unchanged.
+    """
+    if not labels or not value:
+        return value
+    return ", ".join(labels.get(part.strip(), part.strip()) for part in value.split(","))
 
 
 def _strip_markdown_fences(text: str) -> str:

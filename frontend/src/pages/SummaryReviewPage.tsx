@@ -79,6 +79,35 @@ function RedFlagBanner({ flags }: { flags: RedFlagItem[] }) {
   );
 }
 
+const ENTITY_LABELS: Record<string, string> = {
+  investigation_value: "Lab",
+  medication: "Medicine",
+  diagnosis: "Diagnosis",
+  procedure: "Procedure",
+};
+
+/** One extracted entity as a readable line, e.g. "HbA1c: 7.8 % (ref 4.0-5.6)". */
+function formatEntity(type: string, value: Record<string, unknown>): string {
+  const s = (key: string) =>
+    value[key] === undefined || value[key] === null ? "" : String(value[key]);
+  switch (type) {
+    case "investigation_value": {
+      const ref = s("reference_range") ? ` (ref ${s("reference_range")})` : "";
+      return `${s("test")}: ${s("value")} ${s("unit")}${ref}`.replace(/\s+/g, " ").trim();
+    }
+    case "medication":
+      return [s("drug"), s("dose"), s("frequency")].filter(Boolean).join(" · ");
+    case "diagnosis":
+      return s("diagnosis") || Object.values(value).join(", ");
+    case "procedure":
+      return s("procedure") || Object.values(value).join(", ");
+    default:
+      return Object.entries(value)
+        .map(([k, v]) => `${k.replace(/_/g, " ")}: ${String(v)}`)
+        .join(", ");
+  }
+}
+
 function DocumentTimeline({ documents }: { documents: DocumentItem[] }) {
   if (documents.length === 0) return null;
   return (
@@ -102,8 +131,11 @@ function DocumentTimeline({ documents }: { documents: DocumentItem[] }) {
                     key={i}
                     className={`text-xs ${e.is_abnormal ? "font-semibold text-red-600" : "text-gray-600"}`}
                   >
-                    [{e.entity_type}] {JSON.stringify(e.value)}
-                    {e.is_abnormal && " !"}
+                    <span className="mr-1 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-gray-500">
+                      {ENTITY_LABELS[e.entity_type] ?? e.entity_type.replace(/_/g, " ")}
+                    </span>
+                    {formatEntity(e.entity_type, e.value)}
+                    {e.is_abnormal && " — abnormal"}
                   </li>
                 ))}
               </ul>

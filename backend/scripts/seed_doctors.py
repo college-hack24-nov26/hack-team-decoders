@@ -18,17 +18,9 @@ from pathlib import Path
 # module, by ensuring the backend root is importable.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.bootstrap import DEMO_DOCTORS as DOCTORS  # noqa: E402
 from app.db.session import SessionLocal  # noqa: E402
 from app.models.models import Doctor  # noqa: E402
-
-DOCTORS = [
-    ("Dr. Arvind Sharma", "General Medicine", "Internal Medicine"),
-    ("Dr. Meera Patel", "Ayurveda", "Kayachikitsa"),
-    ("Dr. Rajesh Reddy", "Cardiology", "Interventional Cardiology"),
-    ("Dr. Sunita Gupta", "Pediatrics", "General Paediatrics"),
-    ("Dr. Vikram Singh", "Orthopedics", "Trauma & Joint Replacement"),
-    ("Dr. Anita Joshi", "Ayurveda", "Panchakarma"),
-]
 
 
 def main() -> int:

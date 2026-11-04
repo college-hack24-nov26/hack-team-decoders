@@ -156,6 +156,28 @@ export async function completeSession(
   return api(`/interview/sessions/${sessionId}/complete`, { method: "POST" });
 }
 
+export interface ReviewItem {
+  field_id: string;
+  section: string;
+  question: string;
+  answer: string;
+  skipped: boolean;
+}
+
+export interface SessionReview {
+  session_id: string;
+  status: string;
+  mode: string;
+  chief_complaint: string | null;
+  language: string;
+  items: ReviewItem[];
+}
+
+/** The patient's own answers, question by question, in their language. */
+export async function getSessionReview(sessionId: string): Promise<SessionReview> {
+  return api<SessionReview>(`/interview/sessions/${sessionId}/review${langQuery()}`);
+}
+
 export async function getRedFlags(sessionId: string): Promise<RedFlagData[]> {
   return api<RedFlagData[]>(`/interview/sessions/${sessionId}/red-flags`);
 }

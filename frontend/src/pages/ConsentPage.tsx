@@ -13,10 +13,11 @@
  * chains through the rest, like an attendant standing beside the patient.
  *
  * Audio comes from the server TTS provider (Sarvam), matching the interview
- * screens. The browser's SpeechSynthesis API is kept only as a fallback for when
- * the server has no TTS provider configured: it is device-dependent, sounds
- * robotic on kiosk hardware, and produces nothing at all on a device with no
- * Hindi voice installed — which fails exactly the patients who depend on it.
+ * screens. When the server has no TTS provider configured, the browser's own
+ * speech synthesis reads the on-screen text instead — the already translated
+ * text, in the patient's language, so a Tamil patient hears Tamil when a Tamil
+ * voice is installed. Only when neither works does the screen say audio is
+ * unavailable.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -27,6 +28,7 @@ import { getLanguage } from "../store/language";
 import { CornerMotif, HealthShield } from "../components/AyushmanIcons";
 import { Spinner } from "../components/Spinner";
 import { useAuth } from "../store/auth";
+import { canSpeak, speak as speakInBrowser, stopSpeaking } from "../utils/speech";
 
 type ScopeKey = "interview" | "documents" | "share_with_physician" | "abdm_push";
 
@@ -90,7 +92,11 @@ export function ConsentPage() {
    *  over a stale copy of it. */
   const onClipEndRef = useRef<(() => void) | null>(null);
 
+  /** Server TTS already failed once this visit, so go straight to the browser voice. */
+  const serverAudioFailedRef = useRef(false);
+
   const releaseAudio = useCallback(() => {
+    stopSpeaking();
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -120,39 +126,58 @@ export function ConsentPage() {
         onClipEndRef.current?.();
       };
 
+      /** Read the section's on-screen (translated) text with the browser voice. */
+      const speakFallback = async () => {
+        releaseAudio();
+        if (!canSpeak()) throw new Error("no browser speech");
+        setPlaying(sectionKey);
+        const text = `${t(`consent.sections.${sectionKey}.title`)}. ${t(
+          `consent.sections.${sectionKey}.description`,
+        )}`;
+        const completed = await speakInBrowser(text, language);
+        // Interrupted by stop or by another section starting: not "heard".
+        if (completed) finish();
+      };
+
+      if (!serverAudioFailedRef.current) {
+        try {
+          const blob = await apiBlob(
+            `/consent/audio/${sectionKey}?language=${encodeURIComponent(language)}`,
+          );
+          const url = URL.createObjectURL(blob);
+          objectUrlRef.current = url;
+
+          const audio = new Audio(url);
+          audioRef.current = audio;
+
+          // Only 'ended' marks a section heard — pausing or seeking away must not.
+          audio.onended = finish;
+          audio.onerror = () => {
+            serverAudioFailedRef.current = true;
+            void speakFallback().catch(() => {
+              setPlaying(null);
+              setAudioUnavailable(true);
+            });
+          };
+
+          await audio.play();
+          return;
+        } catch {
+          // Server audio unavailable — no TTS key configured, no credit, or the
+          // provider is down. Remember it so later sections skip the round trip.
+          serverAudioFailedRef.current = true;
+        }
+      }
+
       try {
-        const blob = await apiBlob(
-          `/consent/audio/${sectionKey}?language=${encodeURIComponent(language)}`,
-        );
-        const url = URL.createObjectURL(blob);
-        objectUrlRef.current = url;
-
-        const audio = new Audio(url);
-        audioRef.current = audio;
-
-        // Only 'ended' marks a section heard — pausing or seeking away must not.
-        audio.onended = finish;
-        audio.onerror = () => {
-          releaseAudio();
-          setPlaying(null);
-          setAudioUnavailable(true);
-        };
-
-        await audio.play();
+        await speakFallback();
       } catch {
-        // Server audio unavailable — no Sarvam credit, or the provider is down.
-        //
-        // The browser's own speech synthesis used to cover this, and it was
-        // removed on purpose. It reads the *English* source aloud in a robotic
-        // voice, so a Tamil patient got English they cannot follow while the
-        // screen said Tamil. Saying plainly that audio is unavailable is more
-        // use than pretending to speak.
         releaseAudio();
         setPlaying(null);
         setAudioUnavailable(true);
       }
     },
-    [language, muted, releaseAudio],
+    [language, muted, releaseAudio, t],
   );
 
   /** Stop the current clip without muting future audio.

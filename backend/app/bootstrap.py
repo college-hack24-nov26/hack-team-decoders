@@ -43,10 +43,13 @@ DEFAULT_ADMIN_PASSWORD = "winexe"  # noqa: S105 - demo default, overridable via 
 #: generate summaries. Password matches the admin's (the demo uses one password).
 DEMO_PHYSICIAN_EMAIL = "doctor@medikiosk.in"
 
-# Demo doctors, at least one per department (the F2 department set). Two Ayurveda
-# because the project is for AIIA / Ministry of Ayush and that depth is the
-# differentiator.
-_DOCTORS = [
+# Demo doctors, at least one per department. The kiosk builds its department
+# list from these rows, so a department exists on screen exactly when a doctor
+# here belongs to it. Two Ayurveda because the project is for AIIA / Ministry of
+# Ayush and that depth is the differentiator; the other AYUSH systems (Homeopathy,
+# Unani, Yoga & Naturopathy) are listed so the AYUSH side of the kiosk is complete.
+# The single source of truth: scripts/seed_doctors.py imports this list.
+DEMO_DOCTORS = [
     ("Dr. Arvind Sharma", "General Medicine", "Internal Medicine"),
     ("Dr. Meera Patel", "Ayurveda", "Kayachikitsa"),
     ("Dr. Rajesh Reddy", "Cardiology", "Interventional Cardiology"),
@@ -54,7 +57,14 @@ _DOCTORS = [
     ("Dr. Vikram Singh", "Orthopedics", "Trauma & Joint Replacement"),
     ("Dr. Kavya Menon", "ENT", "Otolaryngology"),
     ("Dr. Anita Joshi", "Ayurveda", "Panchakarma"),
+    ("Dr. Rohan Verma", "General Medicine", "Family Medicine"),
+    ("Dr. Priya Nair", "Gynaecology", "Obstetrics & Gynaecology"),
+    ("Dr. Sameer Khan", "Dermatology", "Clinical Dermatology"),
+    ("Dr. Lakshmi Iyer", "Homeopathy", "Classical Homeopathy"),
+    ("Dr. Farah Siddiqui", "Unani", "Ilaj-bit-Tadbeer"),
+    ("Dr. Ganesh Rao", "Yoga & Naturopathy", "Therapeutic Yoga"),
 ]
+_DOCTORS = DEMO_DOCTORS
 
 # Tables cleared by a reset, children before parents so foreign keys hold. Raw
 # table names because document_embeddings has no ORM model, and a single ordered

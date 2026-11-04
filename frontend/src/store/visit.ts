@@ -34,6 +34,9 @@ export interface VisitSelection {
 
 export function setVisitSelection(selection: VisitSelection): void {
   sessionStorage.setItem(VISIT_KEY, JSON.stringify(selection));
+  // A new visit starts a new interview. Without this, a patient who walked away
+  // mid-visit left their finished interview id behind for the next patient.
+  sessionStorage.removeItem(SESSION_KEY);
 }
 
 export function getVisitSelection(): VisitSelection | null {

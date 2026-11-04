@@ -1,81 +1,97 @@
 /**
  * Patient Summary Review & Confirmation screen.
  *
- * Allows the patient to review the generated structured summary,
- * edit key fields locally if needed, and confirm their summary before proceeding.
+ * Shows the patient exactly what they told the kiosk, grouped by section, read
+ * from their own interview session. It used to call the physician dashboard's
+ * summary route, which a patient token cannot read, so it always fell back to
+ * placeholder text ("General Consultation", "No known drug allergies") that the
+ * patient never said — and then asked them to confirm it.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { fetchPatientSummary, type StructuredContent } from "../api/dashboard";
+import { type ReviewItem, type SessionReview, getSessionReview } from "../api/interview";
 import { HealthShield } from "../components/AyushmanIcons";
-import { SkeletonCard, Spinner } from "../components/Spinner";
+import { SkeletonCard } from "../components/Spinner";
 import { showToast } from "../components/toast-store";
-import { useAuth } from "../store/auth";
-import { getVisitSelection } from "../store/visit";
+import { getLanguage } from "../store/language";
+import { getCompletedInterview, getVisitSelection } from "../store/visit";
+import { canSpeak, speak as speakInBrowser, stopSpeaking } from "../utils/speech";
+
+/** English headings for the interview's sections (see Section in ontology.py). */
+const SECTION_TITLES: Record<string, string> = {
+  chief_complaint: "Main problem",
+  hpi: "About this problem",
+  past_medical: "Past illnesses",
+  past_surgical: "Past operations",
+  drug_history: "Medicines",
+  allergy: "Allergies",
+  family_history: "Family history",
+  personal_history: "Lifestyle",
+  ayush: "Ayurvedic assessment",
+  review_of_systems: "Other symptoms",
+};
+
+function sectionTitle(section: string): string {
+  return SECTION_TITLES[section] ?? section.replace(/_/g, " ");
+}
 
 export function PatientSummaryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { patient } = useAuth();
   const visitSelection = getVisitSelection();
+  const sessionId = getCompletedInterview();
 
+  const [review, setReview] = useState<SessionReview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [isEditedLocally, setIsEditedLocally] = useState(false);
-  const [isConfirmedLocally, setIsConfirmedLocally] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form edit fields
-  const [chiefComplaint, setChiefComplaint] = useState("");
-  const [hpiNarrative, setHpiNarrative] = useState("");
-  const [pastHistory, setPastHistory] = useState("");
-  const [allergies, setAllergies] = useState("");
-  const [ayushAssessment, setAyushAssessment] = useState("");
-
-  const loadSummaryData = useCallback(async () => {
+  const load = useCallback(async () => {
+    if (!sessionId || sessionId === "skipped") {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
-
-    // Initial fallback values from visit selection
-    const deptName = visitSelection?.department || "General";
-    setChiefComplaint(`${deptName} Consultation`);
-    setHpiNarrative("Patient health history collected via voice and touch interview.");
-    setPastHistory("None reported during initial intake.");
-    setAllergies("No known drug allergies.");
-
-    if (patient?.id) {
-      try {
-        const res = await fetchPatientSummary(patient.id);
-        if (res?.summary?.structured_content) {
-          const sc: StructuredContent = res.summary.structured_content;
-          if (sc.chief_complaint) setChiefComplaint(sc.chief_complaint);
-          if (sc.hpi?.narrative) setHpiNarrative(sc.hpi.narrative);
-          if (sc.past_medical_history) setPastHistory(sc.past_medical_history);
-          if (sc.allergies) setAllergies(sc.allergies);
-          if (sc.ayush_assessment) setAyushAssessment(sc.ayush_assessment);
-        }
-      } catch {
-        // Safe fallback to local session state if summary endpoint is not populated yet
-      }
+    try {
+      setReview(await getSessionReview(sessionId));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.error"));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [patient?.id, visitSelection?.department]);
+  }, [sessionId, t]);
 
   useEffect(() => {
-    void loadSummaryData();
-  }, [loadSummaryData]);
+    void load();
+    return stopSpeaking;
+  }, [load]);
 
-  const handleSaveEdits = () => {
-    setEditing(false);
-    setIsEditedLocally(true);
-    showToast("Summary updated (Local Review)", "success");
+  const groups = useMemo(() => {
+    const out: { section: string; items: ReviewItem[] }[] = [];
+    for (const item of review?.items ?? []) {
+      const last = out[out.length - 1];
+      if (last && last.section === item.section) last.items.push(item);
+      else out.push({ section: item.section, items: [item] });
+    }
+    return out;
+  }, [review]);
+
+  const readAloud = () => {
+    const text = (review?.items ?? [])
+      .filter((i) => !i.skipped)
+      .map((i) => `${i.question} ${i.answer}.`)
+      .join(" ");
+    void speakInBrowser(text, review?.language ?? getLanguage()).catch(() => undefined);
   };
 
   const handleConfirm = () => {
-    setIsConfirmedLocally(true);
-    showToast("Summary reviewed and confirmed!", "success");
+    stopSpeaking();
+    showToast(
+      t("patientSummary.confirmedToast", "Thank you — your answers are with the doctor"),
+      "success",
+    );
     navigate("/visit/done");
   };
 
@@ -83,32 +99,8 @@ export function PatientSummaryPage() {
     return (
       <main className="flex min-h-[calc(100vh-10rem)] flex-col items-center justify-center px-6 py-8">
         <div className="w-full max-w-lg space-y-4 text-center">
-          <Spinner size="md" className="mx-auto text-primary-600" />
-          <h2 className="text-xl font-bold text-gray-800">
-            {t("patientSummary.generatingTitle", "Preparing Your Health Summary...")}
-          </h2>
-          <p className="text-sm text-gray-500">
-            {t(
-              "patientSummary.generatingSubtitle",
-              "Combining your uploaded documents & responses",
-            )}
-          </p>
+          <h2 className="text-xl font-bold text-gray-800">{t("patientSummary.generatingTitle")}</h2>
           <SkeletonCard />
-        </div>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="flex min-h-[calc(100vh-10rem)] flex-col items-center justify-center px-6 py-8">
-        <div className="w-full max-w-lg text-center">
-          <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-4 text-red-700">
-            {error}
-          </div>
-          <button onClick={() => void loadSummaryData()} className="btn-primary px-6 py-3">
-            {t("common.retry", "Try Again")}
-          </button>
         </div>
       </main>
     );
@@ -117,168 +109,99 @@ export function PatientSummaryPage() {
   return (
     <main className="flex min-h-[calc(100vh-10rem)] flex-col items-center px-6 py-8">
       <div className="w-full max-w-2xl">
-        {/* Header */}
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-primary-600">
-            {t("patientSummary.title", "Review Your Medical Summary")}
-          </h1>
+          <h1 className="text-2xl font-bold text-primary-600">{t("patientSummary.title")}</h1>
           <p className="mt-1 text-sm text-gray-600">
             {t(
-              "patientSummary.subtitle",
-              "Please review the summary below. You can edit any field or confirm to proceed.",
+              "patientSummary.reviewSubtitle",
+              "This is what you told us. The doctor will see these answers.",
             )}
           </p>
         </div>
 
-        {/* ABDM Security badge */}
-        <div className="mb-6 flex items-center justify-between rounded-lg border border-primary-100 bg-primary-50/50 p-3">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary-100 bg-primary-50/50 p-3">
           <div className="flex items-center gap-2">
             <HealthShield size={20} className="text-primary-600" />
             <span className="text-xs font-semibold text-primary-800">
-              {t("patientSummary.abdmNotice", "Encrypted & Prepared for Physician Review")}
+              {t("patientSummary.abdmNotice")}
             </span>
           </div>
-          {/* Status badges */}
-          <div className="flex items-center gap-2">
-            {isEditedLocally && (
-              <span className="rounded-full bg-saffron/10 px-2.5 py-0.5 text-xs font-semibold text-saffron-dark">
-                {t("patientSummary.editedBadge", "Edited by Patient")}
-              </span>
-            )}
-            {isConfirmedLocally && (
-              <span className="rounded-full bg-govgreen/10 px-2.5 py-0.5 text-xs font-semibold text-govgreen">
-                {t("patientSummary.confirmedBadge", "Confirmed by Patient")}
-              </span>
-            )}
-          </div>
+          {visitSelection && (
+            <span className="text-xs font-medium text-gray-600">
+              {t("patientSummary.token", "Token #{{n}}", { n: visitSelection.tokenNumber })}
+              {visitSelection.doctorName ? ` · ${visitSelection.doctorName}` : ""}
+              {visitSelection.department ? ` · ${visitSelection.department}` : ""}
+            </span>
+          )}
         </div>
 
-        {/* Structured summary sections */}
+        {error && (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+            <button onClick={() => void load()} className="ml-3 underline">
+              {t("common.retry", "Try again")}
+            </button>
+          </div>
+        )}
+
+        {!review && !error && (
+          <div className="govt-card p-6 text-center text-gray-600">
+            {t("patientSummary.noInterview", "No interview answers were recorded for this visit.")}
+          </div>
+        )}
+
+        {review && canSpeak() && (
+          <button
+            type="button"
+            onClick={readAloud}
+            className="mb-4 flex items-center gap-2 rounded-md px-3 py-2 text-base text-primary-600 hover:bg-primary-50"
+          >
+            <span aria-hidden="true">🔊</span>
+            {t("patientSummary.readAloud", "Read my answers aloud")}
+          </button>
+        )}
+
         <div className="space-y-4">
-          {/* Department / Chief Complaint */}
-          <div className="govt-card p-4">
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500">
-              {t("patientSummary.chiefComplaint", "Chief Complaint / Primary Concern")}
-            </label>
-            {editing ? (
-              <input
-                type="text"
-                value={chiefComplaint}
-                onChange={(e) => setChiefComplaint(e.target.value)}
-                className="mt-2 w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-200"
-              />
-            ) : (
-              <p className="mt-1 text-base font-semibold text-gray-800">
-                {chiefComplaint || t("common.none", "None specified")}
-              </p>
-            )}
-          </div>
-
-          {/* HPI Narrative */}
-          <div className="govt-card p-4">
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500">
-              {t("patientSummary.symptoms", "History of Presenting Symptoms")}
-            </label>
-            {editing ? (
-              <textarea
-                rows={3}
-                value={hpiNarrative}
-                onChange={(e) => setHpiNarrative(e.target.value)}
-                className="mt-2 w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-200"
-              />
-            ) : (
-              <p className="mt-1 text-sm leading-relaxed text-gray-800">
-                {hpiNarrative || t("common.none", "No details recorded")}
-              </p>
-            )}
-          </div>
-
-          {/* Medical History */}
-          <div className="govt-card p-4">
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500">
-              {t("patientSummary.pastHistory", "Past Medical History")}
-            </label>
-            {editing ? (
-              <input
-                type="text"
-                value={pastHistory}
-                onChange={(e) => setPastHistory(e.target.value)}
-                className="mt-2 w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-200"
-              />
-            ) : (
-              <p className="mt-1 text-sm text-gray-800">
-                {pastHistory || t("common.none", "None")}
-              </p>
-            )}
-          </div>
-
-          {/* Allergies */}
-          <div className="govt-card p-4">
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500">
-              {t("patientSummary.allergies", "Allergies & Sensitivities")}
-            </label>
-            {editing ? (
-              <input
-                type="text"
-                value={allergies}
-                onChange={(e) => setAllergies(e.target.value)}
-                className="mt-2 w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-200"
-              />
-            ) : (
-              <p className="mt-1 text-sm font-medium text-gray-800">
-                {allergies || t("common.none", "No known allergies")}
-              </p>
-            )}
-          </div>
-
-          {/* AYUSH Assessment if present */}
-          {ayushAssessment && (
-            <div className="govt-card p-4 border-l-4 border-l-govgreen">
-              <label className="block text-xs font-bold uppercase tracking-wider text-govgreen">
-                AYUSH / Ayurvedic Assessment
-              </label>
-              <p className="mt-1 text-sm text-gray-800">{ayushAssessment}</p>
-            </div>
-          )}
+          {groups.map((group) => (
+            <section key={group.section} className="govt-card p-4">
+              <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">
+                {t(`patientSummary.sections.${group.section}`, sectionTitle(group.section))}
+              </h2>
+              <dl className="divide-y divide-gray-100">
+                {group.items.map((item) => (
+                  <div key={item.field_id} className="py-2">
+                    <dt className="text-sm text-gray-500">{item.question}</dt>
+                    <dd className="text-base font-medium text-gray-900">
+                      {item.skipped ? (
+                        <span className="italic text-gray-400">
+                          {t("patientSummary.skipped", "Skipped")}
+                        </span>
+                      ) : (
+                        item.answer
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
         </div>
 
-        {/* Action Controls */}
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          {editing ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setEditing(false)}
-                className="btn-secondary flex-1 py-3 text-base"
-              >
-                {t("common.cancel", "Cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveEdits}
-                className="btn-primary flex-1 py-3 text-base"
-              >
-                {t("patientSummary.saveEdits", "Save Changes")}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="btn-secondary flex-1 py-3.5 text-base"
-              >
-                ✏️ {t("patientSummary.editBtn", "Edit Details")}
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirm}
-                className="btn-primary flex-1 py-3.5 text-base"
-              >
-                ✓ {t("patientSummary.confirmBtn", "Confirm Summary")}
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            onClick={() => navigate("/documents/upload")}
+            className="btn-secondary flex-1 py-3.5 text-base"
+          >
+            {t("patientSummary.addPapers", "Add medical papers")}
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            className="btn-primary flex-1 py-3.5 text-base"
+          >
+            ✓ {t("patientSummary.confirmBtn")}
+          </button>
         </div>
       </div>
     </main>
